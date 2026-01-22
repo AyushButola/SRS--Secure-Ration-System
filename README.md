@@ -1,75 +1,85 @@
 🛒 Smart Ration Ledger
-Secure, Offline-First, Fraud-Resistant Public Distribution System
-📌 Overview
+Secure, Offline-First, Fraud-Resistant Ration Distribution System
+📌 Project Overview
 
-Smart Ration Ledger is a secure, offline-capable ration distribution system designed to prevent fraud, double-spending, and data tampering in public distribution networks.
+Smart Ration Ledger (SRS) is a secure and transparent ration distribution system designed to eliminate fraud, duplication, and data tampering in public distribution systems.
 
-The system uses:
+The system works even in low or no internet connectivity areas and synchronizes safely once the network is restored. It uses a hash-chained transaction ledger to ensure data integrity and auditability.
 
-Hash-chained transaction ledger (blockchain-inspired)
+❓ Problem Statement
 
-Offline-first design for rural connectivity issues
+Traditional ration distribution systems face several challenges:
 
-Central validation & audit trail
+Duplicate or fake ration claims
 
-Admin-controlled conflict resolution
+Offline data manipulation
 
-It ensures transparency, accountability, and scalability for millions of beneficiaries.
+No tamper-proof transaction history
 
-🎯 Problem Statement
+Poor audit and monitoring capabilities
 
-Traditional ration systems suffer from:
+Dependency on continuous internet connectivity
 
-Duplicate ration claims
+This leads to leakage, corruption, and lack of trust.
 
-Offline manipulation of records
+✅ Solution Summary
 
-Lack of auditability
+Smart Ration Ledger solves these problems by introducing:
 
-Manual verification delays
+🔗 Cryptographic hash chaining (blockchain-inspired)
 
-Poor visibility for authorities
+📴 Offline-first transaction handling
 
-Smart Ration Ledger solves these issues by introducing cryptographic integrity, controlled offline transactions, and centralized validation.
+🚨 Automated fraud & duplicate detection
 
-🚀 Key Features
+📊 Centralized audit trail
 
-🔗 Hash-Chained Ledger – Every transaction links to the previous one
+👨‍💼 Admin-controlled conflict resolution
 
-📴 Offline Mode Support – Transactions stored locally and synced later
+🌟 Key Features
 
-🚨 Fraud Detection – Duplicate, double-spend, and tampering checks
+Hash-Chained Ledger
+Every transaction links to the previous one, preventing tampering.
 
-👤 Role-Based Access – User, Shopkeeper, Admin
+Offline Mode Support
+Shops can distribute rations even without internet.
 
-📊 Audit Trail – Immutable logs for all activities
+Automatic Sync & Conflict Detection
+Offline transactions are synced safely when connectivity returns.
 
-⚙️ Scalable Architecture – Designed for high transaction volume
+Fraud Prevention
+Detects double spending, duplicates, and data tampering.
 
-🏗️ System Architecture
+Audit Trail
+Immutable logs for every transaction and sync event.
+
+Admin Dashboard
+Central monitoring and manual resolution when needed.
+
+🧱 System Architecture
 
 📍 Insert System Architecture Diagram here
 
-[ PLACEHOLDER FOR SYSTEM ARCHITECTURE DIAGRAM ]
+[ PLACEHOLDER: SYSTEM ARCHITECTURE DIAGRAM ]
 
 
-This diagram should show:
+The architecture consists of:
 
-User Mobile
+User Mobile (QR-based identification)
 
-Shop Device
+Shop Device (online/offline capable)
 
 Central Server
 
-Ledger Database
+Hash Ledger Database
 
 Admin Console
 
-Offline Storage & Backup
+Backup & Offline Storage
 
 🗄️ Database Design
 
-The system uses a normalized relational schema with an immutable transaction ledger.
+The system uses a relational database combined with an append-only transaction ledger.
 
 Core Tables
 
@@ -91,18 +101,20 @@ sync_logs
 
 📍 Insert ER Diagram here
 
-[ PLACEHOLDER FOR ER DIAGRAM ]
+[ PLACEHOLDER: ER DIAGRAM ]
 
 🔄 Transaction Flow
 Online Transaction
 
 User scans QR at shop
 
-Shop validates beneficiary
+Beneficiary details fetched from server
+
+Quota validated
 
 Transaction hash generated
 
-Server validates & commits to ledger
+Transaction committed to ledger
 
 Receipt generated
 
@@ -116,27 +128,27 @@ Transaction queued
 
 Synced when network is restored
 
-Conflicts resolved centrally
+Conflicts handled centrally
 
 📍 Insert Transaction Flowchart here
 
-[ PLACEHOLDER FOR TRANSACTION FLOW DIAGRAM ]
+[ PLACEHOLDER: TRANSACTION FLOW DIAGRAM ]
 
-🔐 Security Design
+🔐 Security & Hash Chain Logic
 
-Hash chain ensures immutability
+Each transaction contains:
 
-Duplicate transaction detection
+Previous hash
 
-Time & quota validation
+Current transaction hash
 
-Tampering quarantine mechanism
+Any modification breaks the chain
 
-Admin-reviewed conflict resolution
+Invalid hashes are quarantined automatically
 
-📍 Insert Hash Chain / Security Flow Diagram here
+📍 Insert Hash Chain Flow Diagram here
 
-[ PLACEHOLDER FOR SECURITY / HASH FLOW DIAGRAM ]
+[ PLACEHOLDER: HASH CHAIN / SECURITY FLOW ]
 
 ⚠️ Conflict Handling
 
@@ -144,27 +156,27 @@ The system detects:
 
 Duplicate transactions
 
+Double spending
+
 Hash mismatches
 
 Offline sync conflicts
 
-Double-spending attempts
-
 Conflicts are:
 
-Flagged automatically
+Automatically flagged
 
-Logged immutably
+Logged in audit trail
 
-Resolved via admin dashboard
+Resolved by admin when required
 
 📍 Insert Conflict Resolution Flowchart here
 
-[ PLACEHOLDER FOR CONFLICT RESOLUTION DIAGRAM ]
+[ PLACEHOLDER: CONFLICT RESOLUTION DIAGRAM ]
 
 👨‍💼 Admin Dashboard
 
-Admin capabilities:
+Admin can:
 
 Monitor system health
 
@@ -178,70 +190,23 @@ Generate reports
 
 📍 Insert Admin Workflow Diagram here
 
-[ PLACEHOLDER FOR ADMIN FLOW DIAGRAM ]
+[ PLACEHOLDER: ADMIN FLOW DIAGRAM ]
 
-🛠️ Tech Stack (Suggested)
+🛠️ Tech Stack (Current / Planned)
 Layer	Technology
 Frontend	HTML, CSS, JavaScript
-Mobile / Device	Android / Web App
-Backend	Node.js / Django / Spring Boot
+Shop Device	Web / Android App
+Backend	Node.js / Django (planned)
 Database	PostgreSQL / MySQL
-Cache	Redis
-Security	SHA-256 Hashing
-Sync	REST APIs
+Hashing	SHA-256
+APIs	REST
 Deployment	Docker / Cloud VM
 📈 Scalability & Reliability
 
+Append-only ledger for fast writes
+
+Offline batching reduces server load
+
 Stateless backend APIs
 
-Append-only ledger writes
-
-Offline batching reduces load
-
-Horizontal scaling ready
-
-Backup & recovery supported
-
-🧪 Testing Strategy
-
-Unit tests for hash generation
-
-Sync conflict simulations
-
-Offline → online merge testing
-
-Fraud scenario testing
-
-Load testing for peak distribution hours
-
-🏆 Why This Project Stands Out
-
-Real-world problem solving
-
-Works even with zero connectivity
-
-Tamper-proof transaction history
-
-Easy to audit for government authorities
-
-Designed with production thinking
-
-📌 Future Enhancements
-
-Biometric authentication
-
-SMS/WhatsApp notifications
-
-AI-based fraud prediction
-
-Public transparency dashboard
-
-Multi-state deployment support
-
-👥 Team
-
-Add team member details here
-
-📜 License
-
-This project is developed for educational / hackathon purposes.
+Backup and recovery supported
