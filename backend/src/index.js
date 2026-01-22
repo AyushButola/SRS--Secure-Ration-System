@@ -24,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/beneficiaries', require('./routes/beneficiaryRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/sync', require('./routes/syncRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 app.get('/', (req, res) => {
     res.send('SRS Backend is running');
