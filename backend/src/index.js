@@ -13,6 +13,9 @@ app.use(cors());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/shops', require('./routes/shopRoutes'));
+app.use('/api/beneficiaries', require('./routes/beneficiaryRoutes'));
 
 app.get('/', (req, res) => {
     res.send('SRS Backend is running');

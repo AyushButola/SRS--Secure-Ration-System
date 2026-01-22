@@ -1,3 +1,13 @@
+-- 0. users (Moved from db.js & Updated)
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role TEXT DEFAULT 'SHOP_OWNER', -- ADMIN / SHOP_OWNER
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 1. beneficiaries
 CREATE TABLE IF NOT EXISTS beneficiaries (
     beneficiary_id TEXT PRIMARY KEY,
@@ -13,6 +23,7 @@ CREATE TABLE IF NOT EXISTS ration_shops (
     shop_name TEXT NOT NULL,
     location TEXT NOT NULL,
     device_id TEXT,
+    status TEXT DEFAULT 'PENDING', -- PENDING / APPROVED / REJECTED
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

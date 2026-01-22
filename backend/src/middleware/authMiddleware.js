@@ -1,17 +1,16 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
 
 const verifyToken = (req, res, next) => {
     const token = req.header('Authorization');
 
     if (!token) {
-        return res.status(401).json({ message: 'Access Denied: No token provided' });
+        return res.status(401).json({ message: 'Access Denied: No Token Provided' });
     }
 
     try {
-        // Handling "Bearer <token>" format
-        const tokenPart = token.startsWith('Bearer ') ? token.slice(7, token.length) : token;
-        const verified = jwt.verify(tokenPart, process.env.JWT_SECRET);
+        // Bearer <token>
+        const tokenString = token.startsWith('Bearer ') ? token.slice(7, token.length) : token;
+        const verified = jwt.verify(tokenString, process.env.JWT_SECRET);
         req.user = verified;
         next();
     } catch (error) {
@@ -19,4 +18,12 @@ const verifyToken = (req, res, next) => {
     }
 };
 
-module.exports = verifyToken;
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'ADMIN') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Access Denied: Admins Only' });
+    }
+};
+
+module.exports = { verifyToken, isAdmin };
