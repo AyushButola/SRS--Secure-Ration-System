@@ -1,212 +1,159 @@
-🛒 Smart Ration Ledger
-Secure, Offline-First, Fraud-Resistant Ration Distribution System
-📌 Project Overview
+# 🛒 Smart Ration Ledger
+**Secure, Offline-First, Fraud-Resistant Ration Distribution System**
 
+## 📌 Project Overview
 Smart Ration Ledger (SRS) is a secure and transparent ration distribution system designed to eliminate fraud, duplication, and data tampering in public distribution systems.
 
-The system works even in low or no internet connectivity areas and synchronizes safely once the network is restored. It uses a hash-chained transaction ledger to ensure data integrity and auditability.
+The system works even in **low or no internet connectivity** areas and synchronizes safely once the network is restored. It uses a **hash-chained transaction ledger** to ensure data integrity and auditability.
 
-❓ Problem Statement
+---
 
+## ❓ Problem Statement
 Traditional ration distribution systems face several challenges:
+- ❌ Duplicate or fake ration claims
+- ❌ Offline data manipulation
+- ❌ No tamper-proof transaction history
+- ❌ Poor audit and monitoring capabilities
+- ❌ Dependency on continuous internet connectivity
 
-Duplicate or fake ration claims
+*This leads to leakage, corruption, and lack of trust.*
 
-Offline data manipulation
+---
 
-No tamper-proof transaction history
-
-Poor audit and monitoring capabilities
-
-Dependency on continuous internet connectivity
-
-This leads to leakage, corruption, and lack of trust.
-
-✅ Solution Summary
-
+## ✅ Solution Summary
 Smart Ration Ledger solves these problems by introducing:
+- **🔗 Cryptographic hash chaining** (blockchain-inspired)
+- **📴 Offline-first transaction handling**
+- **🚨 Automated fraud & duplicate detection**
+- **📊 Centralized audit trail**
+- **👨‍💼 Admin-controlled conflict resolution**
 
-🔗 Cryptographic hash chaining (blockchain-inspired)
+---
 
-📴 Offline-first transaction handling
+## 🌟 Key Features
+- **Hash-Chained Ledger**: Every transaction links to the previous one, preventing tampering.
+- **Offline Mode Support**: Shops can distribute rations even without internet.
+- **Automatic Sync & Conflict Detection**: Offline transactions are synced safely when connectivity returns.
+- **Fraud Prevention**: Detects double spending, duplicates, and data tampering.
+- **Audit Trail**: Immutable logs for every transaction and sync event.
+- **Admin Dashboard**: Central monitoring and manual resolution when needed.
 
-🚨 Automated fraud & duplicate detection
+---
 
-📊 Centralized audit trail
+## 🧱 System Architecture
 
-👨‍💼 Admin-controlled conflict resolution
+![System Architecture - DFD](Static/DFD.jpeg)
 
-🌟 Key Features
+### User Flow
+![User Flow](Static/UserFlow.jpeg)
 
-Hash-Chained Ledger
-Every transaction links to the previous one, preventing tampering.
-
-Offline Mode Support
-Shops can distribute rations even without internet.
-
-Automatic Sync & Conflict Detection
-Offline transactions are synced safely when connectivity returns.
-
-Fraud Prevention
-Detects double spending, duplicates, and data tampering.
-
-Audit Trail
-Immutable logs for every transaction and sync event.
-
-Admin Dashboard
-Central monitoring and manual resolution when needed.
-
-🧱 System Architecture
-
-📍 Insert System Architecture Diagram here
-
-[ PLACEHOLDER: SYSTEM ARCHITECTURE DIAGRAM ]
+### Shop Flow
+![Shop Flow](Static/shopflow.jpeg)
 
 
-The architecture consists of:
+### The architecture consists of:
+1. **User Mobile**: QR-based identification
+2. **Shop Device**: Online/Offline capable POS/App
+3. **Central Server**: Sync and validation
+4. **Hash Ledger Database**: Immutable record keeping
+5. **Admin Console**: Monitoring and management
+6. **Backup & Offline Storage**: Ensuring data availability
 
-User Mobile (QR-based identification)
+---
 
-Shop Device (online/offline capable)
-
-Central Server
-
-Hash Ledger Database
-
-Admin Console
-
-Backup & Offline Storage
-
-🗄️ Database Design
-
+## 🗄️ Database Design
 The system uses a relational database combined with an append-only transaction ledger.
 
-Core Tables
+### Core Tables
+* `beneficiaries`
+* `ration_shops`
+* `ration_items`
+* `entitlements`
+* `transactions`
+* `ledger_state`
+* `conflicts`
+* `sync_logs`
 
-beneficiaries
+![ER Diagram](Static/ER_Diagram.jpeg)
 
-ration_shops
+---
 
-ration_items
+## 🔄 Transaction Flow
 
-entitlements
+### Online Transaction
+1. User scans QR at shop.
+2. Beneficiary details fetched from server.
+3. Quota validated.
+4. Transaction hash generated.
+5. Transaction committed to ledger.
+6. Receipt generated.
 
-transactions
+### Offline Transaction
+1. Transaction stored locally.
+2. Hash generated using last known state.
+3. Transaction queued.
+4. Synced when network is restored.
+5. Conflicts handled centrally.
 
-ledger_state
+![Transaction Flow Diagram](Static/UserFlow.jpeg)
 
-conflicts
+---
 
-sync_logs
-
-📍 Insert ER Diagram here
-
-[ PLACEHOLDER: ER DIAGRAM ]
-
-🔄 Transaction Flow
-Online Transaction
-
-User scans QR at shop
-
-Beneficiary details fetched from server
-
-Quota validated
-
-Transaction hash generated
-
-Transaction committed to ledger
-
-Receipt generated
-
-Offline Transaction
-
-Transaction stored locally
-
-Hash generated using last known state
-
-Transaction queued
-
-Synced when network is restored
-
-Conflicts handled centrally
-
-📍 Insert Transaction Flowchart here
-
-[ PLACEHOLDER: TRANSACTION FLOW DIAGRAM ]
-
-🔐 Security & Hash Chain Logic
-
+## 🔐 Security & Hash Chain Logic
 Each transaction contains:
+- `Previous hash`
+- `Current transaction hash`
 
-Previous hash
+*Any modification breaks the chain. Invalid hashes are quarantined automatically.*
 
-Current transaction hash
+![Hash Chain Diagram Placeholder](https://via.placeholder.com/800x400?text=Hash+Chain+Logic)
 
-Any modification breaks the chain
+---
 
-Invalid hashes are quarantined automatically
-
-📍 Insert Hash Chain Flow Diagram here
-
-[ PLACEHOLDER: HASH CHAIN / SECURITY FLOW ]
-
-⚠️ Conflict Handling
-
+## ⚠️ Conflict Handling
 The system detects:
+- Duplicate transactions
+- Double spending
+- Hash mismatches
+- Offline sync conflicts
 
-Duplicate transactions
+**Conflicts are:**
+- Automatically flagged
+- Logged in audit trail
+- Resolved by admin when required
 
-Double spending
+![Conflict Resolution Diagram](Static/ConflictResolveDesign.jpeg)
 
-Hash mismatches
+---
 
-Offline sync conflicts
-
-Conflicts are:
-
-Automatically flagged
-
-Logged in audit trail
-
-Resolved by admin when required
-
-📍 Insert Conflict Resolution Flowchart here
-
-[ PLACEHOLDER: CONFLICT RESOLUTION DIAGRAM ]
-
-👨‍💼 Admin Dashboard
-
+## 👨‍💼 Admin Dashboard
 Admin can:
+- Monitor system health
+- Review flagged transactions
+- Block users or shops
+- View audit logs
+- Generate reports
 
-Monitor system health
+![Admin Workflow Diagram](Static/adminFLow.jpeg)
 
-Review flagged transactions
+---
 
-Block users or shops
+## 🛠️ Tech Stack (Current / Planned)
 
-View audit logs
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend** | HTML, CSS, JavaScript |
+| **Shop Device** | Web / Android App |
+| **Backend** | Node.js / Express |
+| **Database** | PostgreSQL |
+| **Hashing** | SHA-256 (bcryptjs) |
+| **APIs** | REST |
+| **Deployment** | Docker / Cloud VM |
 
-Generate reports
+---
 
-📍 Insert Admin Workflow Diagram here
-
-[ PLACEHOLDER: ADMIN FLOW DIAGRAM ]
-
-🛠️ Tech Stack (Current / Planned)
-Layer	Technology
-Frontend	HTML, CSS, JavaScript
-Shop Device	Web / Android App
-Backend	Node.js / Django (planned)
-Database	PostgreSQL / MySQL
-Hashing	SHA-256
-APIs	REST
-Deployment	Docker / Cloud VM
-📈 Scalability & Reliability
-
-Append-only ledger for fast writes
-
-Offline batching reduces server load
-
-Stateless backend APIs
-
-Backup and recovery supported
+## 📈 Scalability & Reliability
+- **Prioritize fast writes**: Append-only ledger
+- **Offline batching**: Reduces server load
+- **Stateless backend APIs**: Easy scaling
+- **Backup and recovery**: Fully supported
