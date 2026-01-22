@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { syncTransactions } = require('../controllers/syncController');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
-router.post('/', syncTransactions);
+router.post('/', authenticateToken, syncTransactions);
 
 module.exports = router;

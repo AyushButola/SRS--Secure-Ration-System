@@ -6,7 +6,7 @@ import { BlurView } from 'expo-blur';
 
 export default function Dashboard() {
   const [offlineCount, setOfflineCount] = useState(0);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState<any[]>([]);
   const [scannedItem, setScannedItem] = useState('');
 
   useEffect(() => {
@@ -28,13 +28,21 @@ export default function Dashboard() {
 
     const newItem = {
       id: Crypto.randomUUID(),
-      commodity: scannedItem.toUpperCase(),
+      commodity: scannedItem.trim().toUpperCase(),
       quantity: 1, // Default 1kg for demo
       price: 0 // Not tracking price yet
     };
 
     setCart(prev => [...prev, newItem]);
     setScannedItem('');
+  };
+
+  const clearData = async () => {
+    const db = await getDB();
+    await db.runAsync('DELETE FROM offline_transactions');
+    setCart([]);
+    updatePendingCount();
+    Alert.alert('Success', 'Local Data Cleared');
   };
 
   const checkout = async () => {
@@ -80,6 +88,9 @@ export default function Dashboard() {
         />
         <TouchableOpacity style={styles.addButton} onPress={addToCart}>
           <Text style={styles.addButtonText}>Add to Cart</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.addButton, { marginTop: 10, backgroundColor: '#EF4444' }]} onPress={clearData}>
+          <Text style={styles.addButtonText}>Reset / Clear Queue</Text>
         </TouchableOpacity>
       </View>
 

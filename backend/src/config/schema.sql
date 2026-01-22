@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS ration_shops (
     shop_name TEXT NOT NULL,
     location TEXT,
     device_id TEXT,
+    password_hash TEXT NOT NULL DEFAULT 'placeholder',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Admin Table (New)
+CREATE TABLE IF NOT EXISTS admins (
+    admin_id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

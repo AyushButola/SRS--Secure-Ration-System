@@ -1,12 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import client from './api/client';
-import { LayoutDashboard, Users, ShoppingBag, AlertTriangle, Link, RefreshCcw } from 'lucide-react';
+import Login from './Login';
+import { LayoutDashboard, Users, ShoppingBag, AlertTriangle, Link, RefreshCcw, LogOut } from 'lucide-react';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState({ beneficiaries: 0, shops: 0, transactions: 0, pending_conflicts: 0 });
   const [ledger, setLedger] = useState([]);
   const [conflicts, setConflicts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const checkAuth = () => {
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      setIsAuthenticated(true);
+      fetchData();
+    } else {
+      setIsAuthenticated(false);
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    setIsAuthenticated(false);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -22,14 +40,21 @@ function App() {
       setConflicts(conflictsRes.data);
     } catch (e) {
       console.error("Fetch Error", e);
+      if (e.response && e.response.status === 401) { // Token invalid/expired
+        handleLogout();
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    checkAuth();
   }, []);
+
+  if (!isAuthenticated) {
+    return <Login onLogin={() => { setIsAuthenticated(true); fetchData(); }} />;
+  }
 
   return (
     <div className="min-h-screen p-8">
@@ -39,9 +64,14 @@ function App() {
           <h1 className="text-3xl font-bold text-gray-800">SRS Admin Command Center</h1>
           <p className="text-gray-500">Secure Ration System - Blockchain Monitor</p>
         </div>
-        <button onClick={fetchData} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-          <RefreshCcw size={18} /> Refresh Data
-        </button>
+        <div className="flex gap-3">
+          <button onClick={fetchData} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            <RefreshCcw size={18} /> Refresh Data
+          </button>
+          <button onClick={handleLogout} className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+            <LogOut size={18} /> Logout
+          </button>
+        </div>
       </header>
 
       {/* Stats Grid */}

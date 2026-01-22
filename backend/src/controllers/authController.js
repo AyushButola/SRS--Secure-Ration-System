@@ -1,82 +1,53 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
-require('dotenv').config();
+const bcrypt = require('bcryptjs');
+const pool = require('../config/db').pool;
 
-const register = async (req, res) => {
-    const { username, email, password } = req.body;
+const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_key_123'; // In prod, use .env
 
-    if (!username || !email || !password) {
-        return res.status(400).json({ message: 'Please provide all fields' });
+exports.login = async (req, res) => {
+    const { username, password, type } = req.body; // type: 'shop' or 'admin'
+
+    if (!username || !password || !type) {
+        return res.status(400).json({ error: 'Username, password, and type are required' });
     }
 
     try {
-        // Check if user exists
-        const userCheck = await db.query('SELECT * FROM users WHERE email = $1 OR username = $2', [email, username]);
-        if (userCheck.rows.length > 0) {
-            return res.status(400).json({ message: 'User already exists' });
+        let user = null;
+        let id_field = '';
+
+        if (type === 'shop') {
+            const result = await pool.query('SELECT * FROM ration_shops WHERE shop_id = $1', [username]);
+            user = result.rows[0];
+            id_field = 'shop_id';
+        } else if (type === 'admin') {
+            const result = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
+            user = result.rows[0];
+            id_field = 'admin_id';
+        } else {
+            return res.status(400).json({ error: 'Invalid user type' });
         }
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Insert user
-        const newUser = await db.query(
-            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
-            [username, email, hashedPassword]
-        );
-
-        res.status(201).json({ message: 'User registered successfully', user: newUser.rows[0] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
-const login = async (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Please provide email and password' });
-    }
-
-    try {
-        // Check user
-        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (result.rows.length === 0) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const user = result.rows[0];
-
-        // Check password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+        // Verify password
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Generate Token
-        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(
+            { id: user[id_field], type: type },
+            SECRET_KEY,
+            { expiresIn: '24h' }
+        );
 
-        res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.json({ token, type, id: user[id_field] });
+
+    } catch (err) {
+        console.error('Login Error:', err);
+        res.status(500).json({ error: 'Server error' });
     }
 };
-
-const getMe = async (req, res) => {
-    try {
-        const result = await db.query('SELECT id, username, email, created_at FROM users WHERE id = $1', [req.user.id]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-}
-
-module.exports = { register, login, getMe };

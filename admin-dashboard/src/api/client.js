@@ -8,4 +8,18 @@ const client = axios.create({
     }
 });
 
+// Add Request Interceptor
+client.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('admin_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
 export default client;

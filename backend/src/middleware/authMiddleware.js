@@ -1,22 +1,30 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_key_123';
 
-const verifyToken = (req, res, next) => {
-    const token = req.header('Authorization');
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-        return res.status(401).json({ message: 'Access Denied: No token provided' });
+        return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    try {
-        // Handling "Bearer <token>" format
-        const tokenPart = token.startsWith('Bearer ') ? token.slice(7, token.length) : token;
-        const verified = jwt.verify(tokenPart, process.env.JWT_SECRET);
-        req.user = verified;
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid token.' });
+        }
+        req.user = user;
         next();
-    } catch (error) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
+    });
 };
 
-module.exports = verifyToken;
+const verifyAdmin = (req, res, next) => {
+    authenticateToken(req, res, () => {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({ error: 'Access denied. Admins only.' });
+        }
+        next();
+    });
+};
+
+module.exports = { authenticateToken, verifyAdmin };

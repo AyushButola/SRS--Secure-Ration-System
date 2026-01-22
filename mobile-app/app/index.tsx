@@ -8,22 +8,57 @@ import Constants from 'expo-constants'; // For debug info
 export default function LoginScreen() {
     const router = useRouter();
     const [shopId, setShopId] = useState('SHOP_001'); // Default for demo
+    const [password, setPassword] = useState('password123'); // Default password
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = async () => {
-        setLoading(true);
-        // Simulating Auth for now (as we didn't implement complex Auth API, just Transaction API)
-        // Real app would hit POST /api/auth/login
+    // Check for existing session
+    React.useEffect(() => {
+        const checkSession = async () => {
+            const token = await AsyncStorage.getItem('auth_token');
+            if (token) {
+                router.replace('/(tabs)');
+            }
+        };
+        checkSession();
+    }, []);
 
-        setTimeout(async () => {
-            setLoading(false);
-            if (shopId.length > 3) {
-                await AsyncStorage.setItem('shop_id', shopId);
+    const handleLogin = async () => {
+        if (!shopId || !password) {
+            Alert.alert('Error', 'Please enter Shop ID and Password');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Import client here to avoid circular dependency issues if any, 
+            // though usually top-level import is fine. Using axios directly for login
+            // to avoid interceptor issues, but client is cleaner.
+            // Let's use the client we defined.
+            const client = require('../src/api/client').default;
+
+            const response = await client.post('/auth/login', {
+                username: shopId,
+                password: password,
+                type: 'shop'
+            });
+
+            const { token, id } = response.data;
+
+            if (token) {
+                await AsyncStorage.setItem('auth_token', token);
+                await AsyncStorage.setItem('shop_id', id);
                 router.replace('/(tabs)');
             } else {
-                Alert.alert('Error', 'Invalid Shop ID');
+                Alert.alert('Login Failed', 'No token received');
             }
-        }, 1000);
+
+        } catch (error: any) {
+            console.error('Login Error:', error);
+            const msg = error.response?.data?.error || 'Failed to login';
+            Alert.alert('Login Failed', msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -40,6 +75,17 @@ export default function LoginScreen() {
                         value={shopId}
                         onChangeText={setShopId}
                         autoCapitalize="characters"
+                    />
+                </View>
+
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Password</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
                     />
                 </View>
 
