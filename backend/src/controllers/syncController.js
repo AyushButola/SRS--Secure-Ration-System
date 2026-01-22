@@ -154,6 +154,10 @@ const syncTransactions = async (req, res) => {
                 [newHash, offlineTxn.txn_id]
             );
 
+            // 3f. Deduct Stock (Late Deduction)
+            const { deductStock } = require('../utils/stock');
+            await deductStock(client, offlineTxn.shop_id, offlineTxn.commodity, offlineTxn.quantity);
+
             results.synced++;
         }
 

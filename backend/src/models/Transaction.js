@@ -80,6 +80,10 @@ class Transaction {
                 [newHash, txn_id, 'GLOBAL']
             );
 
+            // 6. Deduct Stock
+            const { deductStock } = require('../utils/stock');
+            await deductStock(client, shop_id, commodity, quantity);
+
             await client.query('COMMIT'); // Commit Transaction
             return savedTxn;
 

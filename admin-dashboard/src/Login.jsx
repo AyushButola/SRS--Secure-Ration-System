@@ -34,18 +34,18 @@ export default function Login({ onLogin }) {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-                <div className="flex justify-center mb-6">
-                    <div className="bg-blue-100 p-4 rounded-full">
-                        <Lock className="text-blue-600" size={32} />
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+            <div className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+                <div className="flex justify-center mb-8">
+                    <div className="bg-blue-600 p-4 rounded-xl shadow-lg shadow-blue-200">
+                        <Lock className="text-white" size={32} />
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">Admin Login</h2>
-                <p className="text-center text-gray-500 mb-6">Secure Ration System</p>
+                <h2 className="text-3xl font-extrabold text-center text-slate-800 mb-2">Admin Portal</h2>
+                <p className="text-center text-slate-500 mb-8 font-medium">Secure Ration Distribution System</p>
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm text-center">
+                    <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl mb-6 text-sm text-center font-medium">
                         {error}
                     </div>
                 )}

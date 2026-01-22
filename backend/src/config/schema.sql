@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS beneficiaries (
     beneficiary_id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     category TEXT, -- BPL, AAY
+    password_hash TEXT DEFAULT '$2b$10$9XHVTG1gs6w2DtJ5cjGs9uVRc7XaW9fP1Uh6Y9gG6OzFHnvi153tW', -- Default: password123
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

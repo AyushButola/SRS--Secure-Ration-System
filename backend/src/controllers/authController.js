@@ -23,6 +23,10 @@ exports.login = async (req, res) => {
             const result = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
             user = result.rows[0];
             id_field = 'admin_id';
+        } else if (type === 'beneficiary') {
+            const result = await pool.query('SELECT * FROM beneficiaries WHERE beneficiary_id = $1', [username]);
+            user = result.rows[0];
+            id_field = 'beneficiary_id';
         } else {
             return res.status(400).json({ error: 'Invalid user type' });
         }

@@ -7,47 +7,55 @@ import Constants from 'expo-constants'; // For debug info
 
 export default function LoginScreen() {
     const router = useRouter();
-    const [shopId, setShopId] = useState('SHOP_001'); // Default for demo
-    const [password, setPassword] = useState('password123'); // Default password
+    const [username, setUsername] = useState('SHOP_001'); // Default
+    const [password, setPassword] = useState('password123');
+    const [userType, setUserType] = useState('shop'); // 'shop' or 'beneficiary'
     const [loading, setLoading] = useState(false);
 
-    // Check for existing session
-    React.useEffect(() => {
-        const checkSession = async () => {
-            const token = await AsyncStorage.getItem('auth_token');
-            if (token) {
-                router.replace('/(tabs)');
-            }
-        };
-        checkSession();
-    }, []);
+    // Check for existing session (Disabled for Demo - User wants to see Login)
+    // React.useEffect(() => {
+    //     const checkSession = async () => {
+    //         const token = await AsyncStorage.getItem('auth_token');
+    //         const type = await AsyncStorage.getItem('user_type');
+    //         if (token) {
+    //             if (type === 'beneficiary') {
+    //                 router.replace('/beneficiary');
+    //             } else {
+    //                 router.replace('/(tabs)');
+    //             }
+    //         }
+    //     };
+    //     checkSession();
+    // }, []);
 
     const handleLogin = async () => {
-        if (!shopId || !password) {
-            Alert.alert('Error', 'Please enter Shop ID and Password');
+        if (!username || !password) {
+            Alert.alert('Error', 'Please enter Credentials');
             return;
         }
 
         setLoading(true);
         try {
-            // Import client here to avoid circular dependency issues if any, 
-            // though usually top-level import is fine. Using axios directly for login
-            // to avoid interceptor issues, but client is cleaner.
-            // Let's use the client we defined.
             const client = require('../src/api/client').default;
 
             const response = await client.post('/auth/login', {
-                username: shopId,
+                username: username.toUpperCase(), // Ensure uppercase for IDs
                 password: password,
-                type: 'shop'
+                type: userType
             });
 
-            const { token, id } = response.data;
+            const { token, id, type } = response.data;
 
             if (token) {
                 await AsyncStorage.setItem('auth_token', token);
-                await AsyncStorage.setItem('shop_id', id);
-                router.replace('/(tabs)');
+                await AsyncStorage.setItem('user_id', id);
+                await AsyncStorage.setItem('user_type', type);
+
+                if (type === 'beneficiary') {
+                    router.replace('/beneficiary');
+                } else {
+                    router.replace('/(tabs)');
+                }
             } else {
                 Alert.alert('Login Failed', 'No token received');
             }
@@ -65,15 +73,31 @@ export default function LoginScreen() {
         <View style={styles.container}>
             <BlurView intensity={50} style={styles.glassCard}>
                 <Text style={styles.title}>Secure Ration System</Text>
-                <Text style={styles.subtitle}>Shop Owner Login</Text>
+                <Text style={styles.subtitle}>{userType === 'shop' ? 'Shop Owner Login' : 'Beneficiary Login'}</Text>
+
+                {/* Type Toggle */}
+                <View style={styles.toggleContainer}>
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, userType === 'shop' && styles.toggleActive]}
+                        onPress={() => { setUserType('shop'); setUsername('SHOP_001'); }}
+                    >
+                        <Text style={[styles.toggleText, userType === 'shop' && styles.toggleTextActive]}>Shop Ops</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, userType === 'beneficiary' && styles.toggleActive]}
+                        onPress={() => { setUserType('beneficiary'); setUsername('BEN_001'); }}
+                    >
+                        <Text style={[styles.toggleText, userType === 'beneficiary' && styles.toggleTextActive]}>Beneficiary</Text>
+                    </TouchableOpacity>
+                </View>
 
                 <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Shop ID</Text>
+                    <Text style={styles.label}>{userType === 'shop' ? 'Shop ID' : 'Ration Card ID'}</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Enter Shop ID"
-                        value={shopId}
-                        onChangeText={setShopId}
+                        placeholder={userType === 'shop' ? "Enter Shop ID" : "Enter Ration Card ID"}
+                        value={username}
+                        onChangeText={setUsername}
                         autoCapitalize="characters"
                     />
                 </View>
@@ -93,13 +117,9 @@ export default function LoginScreen() {
                     {loading ? (
                         <ActivityIndicator color="#FFF" />
                     ) : (
-                        <Text style={styles.buttonText}>Login to Dashboard</Text>
+                        <Text style={styles.buttonText}>Login</Text>
                     )}
                 </TouchableOpacity>
-
-                <Text style={styles.footer}>
-                    Connecting to: {Constants.expoConfig?.hostUri || 'Localhost'}
-                </Text>
             </BlurView>
         </View>
     );
@@ -108,60 +128,106 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#4F46E5', // Primary Color
+        backgroundColor: '#F8FAFC', // Light Gray-White Background (Modern)
         justifyContent: 'center',
-        padding: 20,
+        padding: 24,
     },
     glassCard: {
-        padding: 30,
-        borderRadius: 20,
+        padding: 40,
+        borderRadius: 24,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        backgroundColor: '#FFFFFF', // Clean White Card
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
         borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
     },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#FFF',
+        fontSize: 32,
+        fontWeight: '800', // Extra Bold
+        color: '#1E293B', // Dark Slate
         textAlign: 'center',
-        marginBottom: 10,
+        marginBottom: 8,
     },
     subtitle: {
         fontSize: 16,
-        color: 'rgba(255, 255, 255, 0.8)',
+        color: '#64748B', // Slate Gray
         textAlign: 'center',
-        marginBottom: 30,
+        marginBottom: 32,
     },
     inputContainer: {
-        marginBottom: 20,
+        marginBottom: 24,
     },
     label: {
-        color: '#FFF',
-        marginBottom: 5,
-        fontWeight: '600',
+        color: '#334155', // Darker Label
+        marginBottom: 8,
+        fontWeight: '700',
+        fontSize: 14,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: '#FFF',
-        borderRadius: 10,
-        padding: 15,
+        backgroundColor: '#F1F5F9', // Light Slate Input BG
+        borderRadius: 12,
+        padding: 16,
         fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        color: '#0F172A'
     },
     button: {
-        backgroundColor: '#10B981', // Success Green
-        padding: 15,
-        borderRadius: 10,
+        backgroundColor: '#2563EB', // Royal Blue
+        paddingVertical: 18,
+        borderRadius: 12,
         alignItems: 'center',
+        shadowColor: "#2563EB",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 5,
+        marginTop: 10
     },
     buttonText: {
         color: '#FFF',
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 18,
     },
     footer: {
         marginTop: 20,
         textAlign: 'center',
-        color: 'rgba(255,255,255,0.5)',
-        fontSize: 12
+        color: '#94A3B8',
+        fontSize: 13
+    },
+    toggleContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#F1F5F9',
+        borderRadius: 12,
+        padding: 6,
+        marginBottom: 32
+    },
+    toggleBtn: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderRadius: 8
+    },
+    toggleActive: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2
+    },
+    toggleText: {
+        color: '#64748B',
+        fontWeight: '600'
+    },
+    toggleTextActive: {
+        color: '#2563EB', // Royal Blue
+        fontWeight: 'bold'
     }
 });

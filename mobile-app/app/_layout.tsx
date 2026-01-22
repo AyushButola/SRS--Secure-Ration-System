@@ -6,7 +6,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  // anchor: '(tabs)', // Removed to ensure index.tsx (Login) is first
+  initialRouteName: 'index',
 };
 
 export default function RootLayout() {
