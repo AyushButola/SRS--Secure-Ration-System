@@ -49,14 +49,17 @@ export default function SyncScreen() {
                 const result = res.data.results;
                 log(`Synced: ${result.synced}, Failed: ${result.failed}`);
 
-                // 4. Update Local DB
-                // Mark all sent as synced (simplification: assume partial failure handled by checking 'errors' array)
-                // Ideally we only mark the ones that succeeded.
+                if (result.errors && result.errors.length > 0) {
+                    result.errors.forEach(err => log(`[!] ${err.id.substring(0, 4)}... : ${err.error}`));
+                }
 
-                // Mark all for now to clear queue
-                await db.runAsync('UPDATE offline_transactions SET synced = 1 WHERE synced = 0');
-                log('Local DB Updated.');
-                Alert.alert('Sync Complete');
+                if (result.synced > 0) {
+                    await db.runAsync('UPDATE offline_transactions SET synced = 1 WHERE synced = 0');
+                    log('Local DB Updated.');
+                    Alert.alert('Sync Partial/Complete');
+                } else if (result.failed > 0) {
+                    log('See errors above.');
+                }
             }
         } catch (e) {
             log(`ERROR: ${e.message}`);
