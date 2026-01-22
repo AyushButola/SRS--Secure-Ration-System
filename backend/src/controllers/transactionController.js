@@ -182,4 +182,40 @@ const syncTransactions = async (req, res) => {
     }
 };
 
-module.exports = { processTransaction, syncTransactions };
+// GET /api/transactions/beneficiary/:id
+const getTransactionsForBeneficiary = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT t.*, s.shop_name 
+            FROM transactions t
+            LEFT JOIN ration_shops s ON t.shop_id = s.shop_id
+            WHERE t.beneficiary_id = $1
+            ORDER BY t.timestamp DESC
+        `, [id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// GET /api/transactions/shop/:id
+const getTransactionsForShop = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT t.*, b.name as beneficiary_name 
+            FROM transactions t
+            LEFT JOIN beneficiaries b ON t.beneficiary_id = b.beneficiary_id
+            WHERE t.shop_id = $1
+            ORDER BY t.timestamp DESC
+        `, [id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { processTransaction, syncTransactions, getTransactionsForBeneficiary, getTransactionsForShop };

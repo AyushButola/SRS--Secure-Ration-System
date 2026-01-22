@@ -24,6 +24,17 @@ app.get('/', (req, res) => {
 
 const initializeSchema = require('./config/initSchema');
 
+// DEBUG ENDPOINT
+app.get('/api/test-code/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { pool } = require('./config/db');
+        const result = await pool.query('SELECT secret_code FROM beneficiary_secrets WHERE beneficiary_id = $1', [id]);
+        if (result.rows.length === 0) return res.json({ msg: 'Not Found' });
+        res.json(result.rows[0]);
+    } catch (e) { res.json({ error: e.message }); }
+});
+
 // Initialize DB and Start Server
 const startServer = async () => {
     await initializeSchema();

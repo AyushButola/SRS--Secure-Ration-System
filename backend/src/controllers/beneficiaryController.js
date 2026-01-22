@@ -43,4 +43,18 @@ const getBeneficiary = async (req, res) => {
     }
 };
 
-module.exports = { createBeneficiary, getBeneficiary };
+const getBeneficiaryCode = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('SELECT secret_code FROM beneficiary_secrets WHERE beneficiary_id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Code not found' });
+        }
+        res.json({ secret_code: result.rows[0].secret_code });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { createBeneficiary, getBeneficiary, getBeneficiaryCode };

@@ -2,42 +2,23 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 const { pool } = require('../config/db');
+const { getPendingShops, approveShop, updateShopStatus, getAllShops } = require('../controllers/adminController');
+const { addStock } = require('../controllers/adminStockController');
 
 // GET /api/admin/shops/pending
-router.get('/shops/pending', verifyToken, isAdmin, async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT shop_id, shop_name, location, device_id, status, created_at 
-            FROM ration_shops 
-            WHERE status = 'PENDING'
-        `);
-        res.json(result.rows);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error retrieving pending shops' });
-    }
-});
+router.get('/shops/pending', verifyToken, isAdmin, getPendingShops);
 
 // PUT /api/admin/shops/:id/approve
-router.put('/shops/:id/approve', verifyToken, isAdmin, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query(`
-            UPDATE ration_shops 
-            SET status = 'APPROVED' 
-            WHERE shop_id = $1 
-            RETURNING *
-        `, [id]);
+router.put('/shops/:id/approve', verifyToken, isAdmin, approveShop);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Shop not found' });
-        }
+// NEW ROUTES
+// GET /api/admin/shops - List all
+router.get('/shops', verifyToken, isAdmin, getAllShops);
 
-        res.json({ message: 'Shop approved successfully', shop: result.rows[0] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error approving shop' });
-    }
-});
+// PUT /api/admin/shops/:id/status - Suspend/Activate
+router.put('/shops/:id/status', verifyToken, isAdmin, updateShopStatus);
+
+// POST /api/admin/shops/:id/stock - Add Stock
+router.post('/shops/:id/stock', verifyToken, isAdmin, addStock);
 
 module.exports = router;
