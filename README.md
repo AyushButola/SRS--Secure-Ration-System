@@ -138,6 +138,42 @@ Admin can:
 
 ---
 
+## ⚙️ Setup & Installation
+
+### 1. Database & Environment Setup
+This project uses **PostgreSQL**. You can use a local instance or a cloud provider like [NeonDB](https://neon.tech).
+
+1.  Navigate to the `backend` folder:
+    ```bash
+    cd backend
+    ```
+
+2.  Create a `.env` file in the `backend` directory with the following variables:
+    ```env
+    PORT=3000
+    DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
+    JWT_SECRET=your_super_secret_key
+    ```
+
+3.  Install dependencies:
+    ```bash
+    npm install
+    ```
+
+4.  Initialize the Database Schema:
+    You can run the initialization script manually:
+    ```bash
+    node src/scripts/initDb.js
+    ```
+    *Alternatively, the schema is automatically checked and created when you start the server.*
+
+5.  Start the Server:
+    ```bash
+    npm run dev
+    ```
+
+---
+
 ## 🛠️ Tech Stack (Current / Planned)
 
 | Layer | Technology |

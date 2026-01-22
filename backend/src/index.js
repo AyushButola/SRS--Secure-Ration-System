@@ -18,9 +18,11 @@ app.get('/', (req, res) => {
     res.send('SRS Backend is running');
 });
 
+const initializeSchema = require('./config/initSchema');
+
 // Initialize DB and Start Server
 const startServer = async () => {
-    await createUserTable();
+    await initializeSchema();
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
