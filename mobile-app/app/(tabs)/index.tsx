@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, LayoutAnimation, Platform, UIManager, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, LayoutAnimation, Platform, UIManager, Alert, Modal, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initDB, getDB } from '../../src/db/sqlite';
 import * as Crypto from 'expo-crypto';
 import CustomModal from '../../components/CustomModal';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import { useRouter } from 'expo-router';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import ReceiptModal from '../../components/ReceiptModal';
+import { MaterialIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 export default function Dashboard() {
     const [offlineCount, setOfflineCount] = useState(0);
     const [cart, setCart] = useState<any[]>([]);
+
+    // Receipt State
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
+    const [recentTxns, setRecentTxns] = useState<any[]>([]);
     const [scannedItem, setScannedItem] = useState('');
     const [stock, setStock] = useState<any>(null);
 
@@ -123,6 +126,10 @@ export default function Dashboard() {
         const db = await getDB();
         const res = await db.getAllAsync('SELECT * FROM offline_transactions WHERE synced = 0');
         setOfflineCount(res.length);
+
+        // Also fetch recent transactions (Both synced and offline)
+        const recents = await db.getAllAsync('SELECT * FROM offline_transactions ORDER BY timestamp DESC LIMIT 5');
+        setRecentTxns(recents);
     };
 
     const addToCart = () => {
@@ -351,6 +358,48 @@ export default function Dashboard() {
                     contentContainerStyle={{ paddingBottom: 100 }}
                 />
             </View>
+
+            {/* Recent Transactions List (Mini) */}
+            <View style={{ paddingHorizontal: 24, paddingBottom: 20 }}>
+                <Text style={styles.sectionTitle}>Recent Distributions</Text>
+                {recentTxns.map((txn: any, index) => (
+                    <View key={index} style={styles.cartItem}>
+                        <View>
+                            <Text style={styles.cartItemName}>{txn.commodity}</Text>
+                            <Text style={{ fontSize: 12, color: '#64748B' }}>{new Date(txn.timestamp).toLocaleTimeString()}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            {txn.synced === 1 ? (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        // Offline Transactions locally stored don't have the real Server Txn ID usually...
+                                        // UNLESS we updated it during sync.
+                                        // For now, let's assume if synced, we can try to fetch by the offline ID 
+                                        // (if we mapped it) OR we should have stored the real ID.
+                                        // Limitation: offline_transactions table uses local ID.
+                                        // Solution: We will just try to use the ID we have. 
+                                        // If the server synced it, it might allow lookup by that ID or we need to map it.
+                                        // Let's rely on the ID matching for now (or fail gracefully).
+                                        setSelectedTxnId(txn.id);
+                                        setShowReceipt(true);
+                                    }}
+                                >
+                                    <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 12 }}>View Receipt</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <Text style={{ color: '#D97706', fontSize: 12 }}>Pending Sync</Text>
+                            )}
+                        </View>
+                    </View>
+                ))}
+            </View>
+
+            {/* Receipt Modal */}
+            <ReceiptModal
+                visible={showReceipt}
+                txnId={selectedTxnId}
+                onClose={() => setShowReceipt(false)}
+            />
 
             {/* Checkout Wrapper */}
             <View style={styles.footer}>

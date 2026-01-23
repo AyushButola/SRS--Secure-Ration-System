@@ -89,6 +89,13 @@ const syncTransactions = async (req, res) => {
                      VALUES ($1, $2, $3, $4, FALSE)`,
                     [`CONF_${offlineTxn.txn_id}`, offlineTxn.txn_id, offlineTxn.beneficiary_id, 'QUOTA_EXCEEDED']
                 );
+
+                // PENALTY: Deduct 5 points from Beneficiary for Offline Over-limit
+                await client.query(
+                    `UPDATE beneficiaries SET trust_score = GREATEST(0, trust_score - 5) WHERE beneficiary_id = $1`,
+                    [offlineTxn.beneficiary_id]
+                );
+
                 continue;
             }
 
@@ -103,15 +110,9 @@ const syncTransactions = async (req, res) => {
             );
             const prevHash = ledgerRes.rows[0].last_hash;
 
-            // 3b. Generate Server-Side Hash
-            // We use the SAME data, but the `prev_hash` is now the SERVER's prev_hash, which integrates it into the valid chain.
-            // Note: This changes the hash from what was calculated offline. This is acceptable for "Eventual Consistency"
-            // where the Server is the Authority.
-            const { generateHash } = require('../utils/hash'); // Lazy load
+            const { generateHash, verifyHash } = require('../utils/hash');
 
-            // Re-construct data for hashing
-            // IMPORTANT: The timestamp might be different if we use 'now', best to use the OFFLINE timestamp to respect when it happened.
-
+            // Construct Data for Verification and Hashing
             const dataToHash = {
                 txn_id: offlineTxn.txn_id,
                 beneficiary_id: offlineTxn.beneficiary_id,
@@ -119,8 +120,63 @@ const syncTransactions = async (req, res) => {
                 ration_period: offlineTxn.ration_period,
                 commodity: offlineTxn.commodity,
                 quantity: offlineTxn.quantity,
-                timestamp: offlineTxn.timestamp // Trusting offline timestamp? Or use server time? usually server or trusted time.
+                timestamp: offlineTxn.timestamp
             };
+
+            // 3b. Verify Offline Hash (Tamper Check)
+            if (offlineTxn.hash && offlineTxn.prev_hash) {
+                const isValidHash = verifyHash(offlineTxn.hash, dataToHash, offlineTxn.prev_hash);
+
+                if (!isValidHash) {
+                    console.warn(`[Sync] Hash Tampering Detected for Txn: ${offlineTxn.txn_id}`);
+
+                    // PENALTY: Deduct 20 points from Shop
+                    await client.query(
+                        `UPDATE ration_shops SET trust_score = GREATEST(0, trust_score - 20) WHERE shop_id = $1`,
+                        [offlineTxn.shop_id]
+                    );
+
+                    results.failed++;
+                    results.errors.push({ id: offlineTxn.txn_id, error: 'Hash Tampering Detected' });
+
+                    // Log Conflict
+                    await client.query(
+                        `INSERT INTO conflicts (conflict_id, txn_id, beneficiary_id, conflict_type, resolved)
+                         VALUES ($1, $2, $3, $4, FALSE)`,
+                        [`CONF_HASH_${offlineTxn.txn_id}`, offlineTxn.txn_id, offlineTxn.beneficiary_id, 'HASH_MISMATCH']
+                    );
+
+                    // Save as INVALID
+                    await client.query(
+                        `INSERT INTO transactions 
+                         (txn_id, beneficiary_id, shop_id, ration_period, commodity, quantity, timestamp, prev_hash, hash, status, synced, offline_otp, offline_otp_verified)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12)`,
+                        [
+                            offlineTxn.txn_id,
+                            offlineTxn.beneficiary_id,
+                            offlineTxn.shop_id,
+                            offlineTxn.ration_period,
+                            offlineTxn.commodity,
+                            offlineTxn.quantity,
+                            offlineTxn.timestamp,
+                            offlineTxn.prev_hash, // Keep original bad hash for proof
+                            offlineTxn.hash,      // Keep original bad hash
+                            'INVALID_HASH',
+                            offlineTxn.otp || null,
+                            offlineTxn.otp_verified ? true : false
+                        ]
+                    );
+
+                    continue; // Skip valid processing
+                }
+            }
+
+            // 3c. Generate Server-Side Hash (Re-chaining to Global Ledger)
+
+            // Re-construct data for hashing
+            // IMPORTANT: The timestamp might be different if we use 'now', best to use the OFFLINE timestamp to respect when it happened.
+
+            // dataToHash is already defined above
 
             const newHash = generateHash(dataToHash, prevHash);
 

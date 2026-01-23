@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS beneficiaries (
     password_hash TEXT DEFAULT '$2b$10$9XHVTG1gs6w2DtJ5cjGs9uVRc7XaW9fP1Uh6Y9gG6OzFHnvi153tW', -- Default: password123
     mobile_number TEXT,
     aadhaar_last_4 VARCHAR(4),
+    trust_score INT DEFAULT 100,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS ration_shops (
     location TEXT,
     device_id TEXT,
     mobile_number TEXT,
+    trust_score INT DEFAULT 100,
     password_hash TEXT NOT NULL DEFAULT 'placeholder',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

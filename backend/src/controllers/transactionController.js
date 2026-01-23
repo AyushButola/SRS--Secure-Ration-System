@@ -46,9 +46,24 @@ const createTransaction = async (req, res) => {
 
         const { consumed_quantity, max_quantity } = updateRes.rows[0];
         if (consumed_quantity > max_quantity) {
-            // Rollback if simple over-consumption check fails (optional strictness)
-            // throw new Error('Exceeds entitlement limit');
             console.warn(`[Txn] Over-consumption detected for ${beneficiary_id} - ${commodity}`);
+
+            // PENALTY: Deduct 5 points for invalid claim
+            await client.query(
+                `UPDATE beneficiaries SET trust_score = GREATEST(0, trust_score - 5) WHERE beneficiary_id = $1`,
+                [beneficiary_id]
+            );
+        } else {
+            // REWARD: Add 1 point for valid transaction (Max 100)
+            await client.query(
+                `UPDATE beneficiaries SET trust_score = LEAST(100, trust_score + 1) WHERE beneficiary_id = $1`,
+                [beneficiary_id]
+            );
+            // REWARD SHOP: Add 1 point
+            await client.query(
+                `UPDATE ration_shops SET trust_score = LEAST(100, trust_score + 1) WHERE shop_id = $1`,
+                [shop_id]
+            );
         }
 
         await client.query('COMMIT');
@@ -69,6 +84,36 @@ const createTransaction = async (req, res) => {
     }
 };
 
+// GET /api/transactions/:txnId/receipt
+const getReceipt = async (req, res) => {
+    const { txnId } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                t.txn_id, t.commodity, t.quantity, t.timestamp, t.hash,
+                b.name as beneficiary_name, b.beneficiary_id,
+                s.shop_name, s.shop_id, s.location
+            FROM transactions t
+            JOIN beneficiaries b ON t.beneficiary_id = b.beneficiary_id
+            JOIN ration_shops s ON t.shop_id = s.shop_id
+            WHERE t.txn_id = $1
+        `;
+
+        const result = await db.query(query, [txnId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Receipt not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Receipt Error:', err);
+        res.status(500).json({ error: 'Failed to fetch receipt' });
+    }
+};
+
 module.exports = {
-    createTransaction
+    createTransaction,
+    getReceipt
 };

@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import otpGenerator from 'otp-generator';
+import ReceiptModal from '../components/ReceiptModal';
 
 export default function BeneficiaryDashboard() {
     const router = useRouter();
@@ -14,6 +15,10 @@ export default function BeneficiaryDashboard() {
     const [beneficiaryId, setBeneficiaryId] = useState('');
     const [qrData, setQrData] = useState('');
     const [otp, setOtp] = useState('');
+
+    // Receipt State
+    const [showReceipt, setShowReceipt] = useState(false);
+    const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
 
     const [lastSynced, setLastSynced] = useState<string | null>(null);
 
@@ -222,12 +227,22 @@ export default function BeneficiaryDashboard() {
                 {/* Transaction History */}
                 <Text style={styles.sectionTitle}>Transaction History</Text>
                 {transactions.map((trans: any) => (
-                    <View key={trans.transaction_id} style={styles.historyCard}>
+                    <View key={trans.transaction_id || trans.txn_id} style={styles.historyCard}>
                         <View style={styles.historyHeader}>
                             <Text style={styles.historyCommodity}>{trans.commodity}</Text>
                             <Text style={styles.historyDate}>{new Date(trans.timestamp).toLocaleDateString()}</Text>
                         </View>
                         <Text style={styles.historyDetails}>Quantity: {trans.quantity} kg | Shop: {trans.shop_id}</Text>
+
+                        <TouchableOpacity
+                            style={styles.receiptLink}
+                            onPress={() => {
+                                setSelectedTxnId(trans.transaction_id || trans.txn_id);
+                                setShowReceipt(true);
+                            }}
+                        >
+                            <Text style={styles.receiptLinkText}>View Receipt</Text>
+                        </TouchableOpacity>
                     </View>
                 ))}
 
@@ -235,6 +250,12 @@ export default function BeneficiaryDashboard() {
                     <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No transactions found.</Text>
                 )}
             </ScrollView>
+
+            <ReceiptModal
+                visible={showReceipt}
+                txnId={selectedTxnId}
+                onClose={() => setShowReceipt(false)}
+            />
         </View >
     );
 }
@@ -377,4 +398,15 @@ const styles = StyleSheet.create({
     historyCommodity: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
     historyDate: { fontSize: 14, color: '#64748B' },
     historyDetails: { fontSize: 14, color: '#475569' },
+    receiptLink: {
+        marginTop: 12,
+        alignSelf: 'flex-start',
+        borderBottomWidth: 1,
+        borderBottomColor: '#2563EB'
+    },
+    receiptLinkText: {
+        color: '#2563EB',
+        fontSize: 13,
+        fontWeight: '600'
+    }
 });
