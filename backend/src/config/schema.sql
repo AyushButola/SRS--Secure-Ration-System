@@ -59,9 +59,10 @@ CREATE TABLE IF NOT EXISTS transactions (
     quantity FLOAT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     prev_hash TEXT,
-    hash TEXT,
+    status VARCHAR(20) DEFAULT 'VALID',
     synced BOOLEAN DEFAULT FALSE,
-    status TEXT -- VALID, DUPLICATE, FLAGGED
+    offline_otp VARCHAR(10),
+    offline_otp_verified BOOLEAN DEFAULT FALSE
 );
 
 -- 6. ledger_state
@@ -89,4 +90,14 @@ CREATE TABLE IF NOT EXISTS sync_logs (
     synced_count INT,
     failed_count INT,
     synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. otp_codes
+CREATE TABLE IF NOT EXISTS otp_codes (
+    otp_id SERIAL PRIMARY KEY,
+    beneficiary_id TEXT REFERENCES beneficiaries(beneficiary_id),
+    otp_code TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '5 minutes'),
+    used BOOLEAN DEFAULT FALSE
 );

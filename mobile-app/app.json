@@ -23,7 +23,13 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "meta": [
+        {
+          "httpEquiv": "Content-Security-Policy",
+          "content": "script-src 'self' 'unsafe-eval';"
+        }
+      ]
     },
     "plugins": [
       "expo-router",

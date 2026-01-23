@@ -25,12 +25,22 @@ const client = axios.create({
 client.interceptors.request.use(
     async (config) => {
         const token = await AsyncStorage.getItem('auth_token');
+        console.log('[API Request]', config.method.toUpperCase(), config.url);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
     (error) => {
+        console.error('[API Request Error]', error);
+        return Promise.reject(error);
+    }
+);
+
+client.interceptors.response.use(
+    response => response,
+    error => {
+        console.error('[API Response Error]', error.message, error.response?.status);
         return Promise.reject(error);
     }
 );

@@ -17,11 +17,12 @@ VALUES
 ON CONFLICT (shop_id) DO NOTHING;
 
 -- Seed Beneficiaries
-INSERT INTO beneficiaries (beneficiary_id, name, category, active)
+INSERT INTO beneficiaries (beneficiary_id, name, category, password_hash, active)
 VALUES
-('BEN_001', 'Ramesh Kumar', 'BPL', TRUE),
-('BEN_002', 'Sita Devi', 'AAY', TRUE)
-ON CONFLICT (beneficiary_id) DO NOTHING;
+('BEN_001', 'Ramesh Kumar', 'BPL', '$2b$10$9XHVTG1gs6w2DtJ5cjGs9uVRc7XaW9fP1Uh6Y9gG6OzFHnvi153tW', TRUE),
+('BEN_002', 'Sita Devi', 'AAY', '$2b$10$9XHVTG1gs6w2DtJ5cjGs9uVRc7XaW9fP1Uh6Y9gG6OzFHnvi153tW', TRUE)
+ON CONFLICT (beneficiary_id) DO UPDATE 
+SET password_hash = EXCLUDED.password_hash, active = EXCLUDED.active;
 
 -- Seed Entitlements (Jan 2026)
 INSERT INTO entitlements (entitlement_id, beneficiary_id, ration_period, commodity, max_quantity, max_offline_txn)

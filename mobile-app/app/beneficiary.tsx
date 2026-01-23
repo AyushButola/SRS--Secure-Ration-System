@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, RefreshControl } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import otpGenerator from 'otp-generator';
 
 export default function BeneficiaryDashboard() {
     const router = useRouter();
@@ -10,11 +12,40 @@ export default function BeneficiaryDashboard() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [beneficiaryId, setBeneficiaryId] = useState('');
+    const [qrData, setQrData] = useState('');
+    const [otp, setOtp] = useState('');
 
-    const fetchData = async () => {
+    const [lastSynced, setLastSynced] = useState<string | null>(null);
+
+    // Load data from offline storage on mount
+    const loadOfflineData = async () => {
+        try {
+            const id = await AsyncStorage.getItem('user_id');
+            if (!id) return;
+            setBeneficiaryId(id);
+
+            const cachedEntitlements = await AsyncStorage.getItem(`entitlements_${id}`);
+            const cachedTransactions = await AsyncStorage.getItem(`transactions_${id}`);
+            const lastSyncTime = await AsyncStorage.getItem(`last_synced_${id}`);
+
+            if (cachedEntitlements) setEntitlements(JSON.parse(cachedEntitlements));
+            if (cachedTransactions) setTransactions(JSON.parse(cachedTransactions));
+            if (lastSyncTime) setLastSynced(lastSyncTime);
+
+            // Also generate QR/OTP if we have ID
+            generateQR(id);
+            // OTP might need network, but we can try generating or showing cached (if we cached it, unlikely for OTP)
+        } catch (e) {
+            console.log('Error loading offline data', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const syncData = async () => {
         setLoading(true);
         try {
-            const id = await AsyncStorage.getItem('user_id'); // We need to store user_id on login
+            const id = await AsyncStorage.getItem('user_id');
             const token = await AsyncStorage.getItem('auth_token');
 
             if (!id || !token) {
@@ -28,24 +59,75 @@ export default function BeneficiaryDashboard() {
             // 1. Fetch Entitlements
             const entRes = await client.get(`/beneficiaries/${id}/entitlements`);
             setEntitlements(entRes.data);
+            await AsyncStorage.setItem(`entitlements_${id}`, JSON.stringify(entRes.data));
 
-            // 2. Fetch History (Optional, if endpoint exists)
-            // For now, let's just show entitlements
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Error', 'Failed to fetch data');
+            // 2. Fetch Transaction History
+            const transRes = await client.get(`/beneficiaries/${id}/transactions`);
+            setTransactions(transRes.data);
+            await AsyncStorage.setItem(`transactions_${id}`, JSON.stringify(transRes.data));
+
+            // Update Sync Time
+            const now = new Date().toLocaleString();
+            setLastSynced(now);
+            await AsyncStorage.setItem(`last_synced_${id}`, now);
+
+            // Generate QR & OTP
+            generateQR(id);
+            generateOTP(id);
+
+        } catch (error: any) {
+            console.error('[Sync Error]', error);
+            const msg = error.message || 'Unknown error';
+            Alert.alert('Offline Mode', `Could not sync: ${msg}\nShowing cached data.`);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchData();
+        // Chain to avoid race condition: Load Cache -> Then Sync Network
+        (async () => {
+            await loadOfflineData();
+            await syncData();
+        })();
     }, []);
 
     const logout = async () => {
-        await AsyncStorage.clear();
-        router.replace('/');
+        try {
+            const id = await AsyncStorage.getItem('user_id');
+            await AsyncStorage.clear();
+            router.replace('/');
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const generateQR = (id = beneficiaryId) => {
+        const timestamp = Date.now();
+        const data = JSON.stringify({
+            beneficiaryId: id,
+            timestamp,
+            type: 'beneficiary_qr'
+        });
+        setQrData(data);
+    };
+
+    const generateOTP = async (id = beneficiaryId) => {
+        try {
+            const token = await AsyncStorage.getItem('auth_token');
+            const client = require('../src/api/client').default;
+
+            const response = await client.post('/otp/generate', {
+                beneficiaryId: id
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setOtp(response.data.otp);
+        } catch (err) {
+            console.error('OTP Generation Error', err);
+            // Don't alert here to avoid spamming usage if offline
+        }
     };
 
     return (
@@ -60,8 +142,61 @@ export default function BeneficiaryDashboard() {
 
             <ScrollView
                 contentContainerStyle={styles.content}
-                refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+                refreshControl={<RefreshControl refreshing={loading} onRefresh={syncData} />}
             >
+                <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                    <Text style={{ textAlign: 'center', color: '#64748B', marginBottom: 8, fontSize: 12 }}>
+                        {loading && !lastSynced ? 'Syncing with server...' :
+                            lastSynced ? `Last Synced: ${lastSynced}` : 'Sync required'}
+                    </Text>
+                    {!loading && (
+                        <TouchableOpacity
+                            onPress={syncData}
+                            style={{
+                                backgroundColor: '#E2E8F0',
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8
+                            }}
+                        >
+                            <Text style={{ color: '#475569', fontSize: 12, fontWeight: '600' }}> Tap to Sync </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* QR Code Section */}
+                <View style={styles.qrSection}>
+                    <Text style={styles.sectionTitle}>My QR Code</Text>
+                    <Text style={styles.qrSubtitle}>Show this at the shop for distribution</Text>
+                    <View style={styles.qrContainer}>
+                        {qrData ? (
+                            <Image
+                                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}` }}
+                                style={{ width: 200, height: 200 }}
+                                contentFit="contain"
+                                transition={1000}
+                            />
+                        ) : (
+                            <Text>Loading QR...</Text>
+                        )}
+                    </View>
+                    <TouchableOpacity style={styles.refreshBtn} onPress={() => generateQR(beneficiaryId)}>
+                        <Text style={styles.refreshText}>Refresh QR</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* OTP Section */}
+                <View style={styles.otpSection}>
+                    <Text style={styles.sectionTitle}>One-Time Password</Text>
+                    <Text style={styles.otpSubtitle}>Provide this to the shop for verification</Text>
+                    <View style={styles.otpContainer}>
+                        <Text style={styles.otpText}>{otp || 'Generating...'}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.refreshBtn} onPress={() => generateOTP(beneficiaryId)}>
+                        <Text style={styles.refreshText}>Generate New OTP</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <Text style={styles.sectionTitle}>Current Entitlements (Jan 2026)</Text>
 
                 {entitlements.map((ent: any) => (
@@ -83,8 +218,24 @@ export default function BeneficiaryDashboard() {
                 {entitlements.length === 0 && !loading && (
                     <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No entitlements found.</Text>
                 )}
+
+                {/* Transaction History */}
+                <Text style={styles.sectionTitle}>Transaction History</Text>
+                {transactions.map((trans: any) => (
+                    <View key={trans.transaction_id} style={styles.historyCard}>
+                        <View style={styles.historyHeader}>
+                            <Text style={styles.historyCommodity}>{trans.commodity}</Text>
+                            <Text style={styles.historyDate}>{new Date(trans.timestamp).toLocaleDateString()}</Text>
+                        </View>
+                        <Text style={styles.historyDetails}>Quantity: {trans.quantity} kg | Shop: {trans.shop_id}</Text>
+                    </View>
+                ))}
+
+                {transactions.length === 0 && !loading && (
+                    <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No transactions found.</Text>
+                )}
             </ScrollView>
-        </View>
+        </View >
     );
 }
 
@@ -118,6 +269,69 @@ const styles = StyleSheet.create({
     logoutText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
     content: { padding: 24, paddingTop: 32 },
     sectionTitle: { fontSize: 20, fontWeight: '800', marginBottom: 20, color: '#1E293B', letterSpacing: 0.5 },
+    qrSection: { alignItems: 'center', marginBottom: 32 },
+    qrSubtitle: { fontSize: 14, color: '#64748B', marginBottom: 20, textAlign: 'center' },
+    qrContainer: {
+        backgroundColor: '#FFF',
+        padding: 20,
+        borderRadius: 16,
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 5,
+        marginBottom: 16
+    },
+    qrPlaceholder: {
+        width: 200,
+        height: 200,
+        backgroundColor: '#F1F5F9',
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed'
+    },
+    qrText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#64748B',
+        marginBottom: 8
+    },
+    qrDataText: {
+        fontSize: 12,
+        color: '#94A3B8',
+        textAlign: 'center'
+    },
+    refreshBtn: {
+        backgroundColor: '#2563EB',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+        shadowColor: "#2563EB",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    refreshText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
+    otpSection: { alignItems: 'center', marginBottom: 32 },
+    otpSubtitle: { fontSize: 14, color: '#64748B', marginBottom: 20, textAlign: 'center' },
+    otpContainer: {
+        backgroundColor: '#FFF',
+        padding: 20,
+        borderRadius: 16,
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 5,
+        marginBottom: 16,
+        minWidth: 150,
+        alignItems: 'center'
+    },
+    otpText: { fontSize: 32, fontWeight: '800', color: '#1E293B', letterSpacing: 4 },
     card: {
         backgroundColor: '#FFF',
         padding: 24,
@@ -146,4 +360,21 @@ const styles = StyleSheet.create({
     progressBarBg: { height: 12, backgroundColor: '#F1F5F9', borderRadius: 6, overflow: 'hidden', marginBottom: 12 },
     progressBarFill: { height: '100%', backgroundColor: '#2563EB', borderRadius: 6 },
     stats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+    historyCard: {
+        backgroundColor: '#FFF',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#F1F5F9'
+    },
+    historyHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    historyCommodity: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
+    historyDate: { fontSize: 14, color: '#64748B' },
+    historyDetails: { fontSize: 14, color: '#475569' },
 });

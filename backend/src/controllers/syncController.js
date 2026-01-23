@@ -65,8 +65,8 @@ const syncTransactions = async (req, res) => {
                 // 2b. Insert FLAGGED Transaction (So Conflict FK works)
                 await client.query(
                     `INSERT INTO transactions 
-                    (txn_id, beneficiary_id, shop_id, ration_period, commodity, quantity, timestamp, prev_hash, hash, status, synced)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)`,
+                    (txn_id, beneficiary_id, shop_id, ration_period, commodity, quantity, timestamp, prev_hash, hash, status, synced, offline_otp, offline_otp_verified)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12)`,
                     [
                         offlineTxn.txn_id,
                         offlineTxn.beneficiary_id,
@@ -77,7 +77,9 @@ const syncTransactions = async (req, res) => {
                         offlineTxn.timestamp,
                         prevHash,
                         'INVALID_HASH_FLAGGED', // Placeholder for flagged txn
-                        'FLAGGED'
+                        'FLAGGED',
+                        offlineTxn.otp || null,
+                        offlineTxn.otp_verified ? true : false
                     ]
                 );
 
@@ -125,8 +127,8 @@ const syncTransactions = async (req, res) => {
             // 3c. Insert
             await client.query(
                 `INSERT INTO transactions 
-                (txn_id, beneficiary_id, shop_id, ration_period, commodity, quantity, timestamp, prev_hash, hash, status, synced)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE)`,
+                (txn_id, beneficiary_id, shop_id, ration_period, commodity, quantity, timestamp, prev_hash, hash, status, synced, offline_otp, offline_otp_verified)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12)`,
                 [
                     offlineTxn.txn_id,
                     offlineTxn.beneficiary_id,
@@ -137,7 +139,9 @@ const syncTransactions = async (req, res) => {
                     offlineTxn.timestamp,
                     prevHash,
                     newHash, // Server Hash
-                    'VALID'
+                    'VALID',
+                    offlineTxn.otp || null,
+                    offlineTxn.otp_verified ? true : false
                 ]
             );
 

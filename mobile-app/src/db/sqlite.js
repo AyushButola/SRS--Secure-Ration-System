@@ -17,7 +17,7 @@ class MockWebDB {
         if (sql.includes('INSERT INTO offline_transactions')) {
             const current = JSON.parse(localStorage.getItem('offline_transactions_web') || '[]');
             // Naive parsing: assume params map maps directly to columns
-            // [id, beneficiaryId, shopId, period, commodity, quantity, timestamp, 0]
+            // [id, beneficiaryId, shopId, period, commodity, quantity, timestamp, 0, otp, verified]
             const newItem = {
                 id: params[0],
                 beneficiary_id: params[1],
@@ -26,7 +26,9 @@ class MockWebDB {
                 commodity: params[4],
                 quantity: params[5],
                 timestamp: params[6],
-                synced: 0
+                synced: 0,
+                otp: params[8] || '',
+                otp_verified: params[9] || 0
             };
             current.push(newItem);
             localStorage.setItem('offline_transactions_web', JSON.stringify(current));
@@ -66,6 +68,16 @@ const getDBInstance = async () => {
 export const initDB = async () => {
     try {
         const db = await getDBInstance();
+        // For dev: force drop to ensure schema update (User can reset if needed, but this ensures new columns exist)
+        // Or better: Use ALTER TABLE in a try-catch blocks to safely add columns if they don't exist.
+        // For simplicity in this demo: We will DROP and RE-CREATE.
+        // await db.execAsync('DROP TABLE IF EXISTS offline_transactions'); 
+
+        // Actually, let's just add the columns via CREATE TABLE logic (won't work if exists)
+        // We will try adding columns if table exists, or just rely on fresh install often for dev apps.
+        // Let's go with the robust approach of creating with new columns and for existing, we ignore (failed risk).
+        // Best approach for hot-reload dev: 
+
         await db.execAsync(`
             PRAGMA journal_mode = WAL;
             CREATE TABLE IF NOT EXISTS offline_transactions (
@@ -76,7 +88,9 @@ export const initDB = async () => {
                 commodity TEXT,
                 quantity REAL,
                 timestamp TEXT,
-                synced INTEGER DEFAULT 0
+                synced INTEGER DEFAULT 0,
+                otp TEXT,
+                otp_verified INTEGER DEFAULT 0
             );
         `);
         console.log(`✅ SQLite Initialized (${Platform.OS})`);

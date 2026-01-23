@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { initSchema } = require('./config/db');
+const { initSchema, seedData } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
@@ -26,6 +26,7 @@ app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/sync', require('./routes/syncRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/shops', require('./routes/shopRoutes'));
+app.use('/api/otp', require('./routes/otpRoutes'));
 
 app.get('/', (req, res) => {
     res.send('SRS Backend is running');
@@ -35,6 +36,7 @@ app.get('/', (req, res) => {
 const startServer = async () => {
     try {
         await initSchema();
+        await seedData(); // Add this to seed the database
     } catch (err) {
         console.error("Schema Init Warning:", err.message);
     }
