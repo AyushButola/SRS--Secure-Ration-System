@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS beneficiaries (
     name TEXT NOT NULL,
     category TEXT, -- BPL, AAY
     password_hash TEXT DEFAULT '$2b$10$9XHVTG1gs6w2DtJ5cjGs9uVRc7XaW9fP1Uh6Y9gG6OzFHnvi153tW', -- Default: password123
+    mobile_number TEXT,
+    aadhaar_last_4 VARCHAR(4),
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -12,8 +14,11 @@ CREATE TABLE IF NOT EXISTS beneficiaries (
 CREATE TABLE IF NOT EXISTS ration_shops (
     shop_id TEXT PRIMARY KEY,
     shop_name TEXT NOT NULL,
+    owner_name TEXT,
+    license_number TEXT,
     location TEXT,
     device_id TEXT,
+    mobile_number TEXT,
     password_hash TEXT NOT NULL DEFAULT 'placeholder',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

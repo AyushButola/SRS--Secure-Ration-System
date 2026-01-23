@@ -32,13 +32,13 @@ exports.login = async (req, res) => {
         }
 
         if (!user) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Invalid Username or Password' });
         }
 
         // Verify password
         const validPassword = await bcrypt.compare(password, user.password_hash);
         if (!validPassword) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Invalid Username or Password' });
         }
 
         // Generate Token
@@ -53,5 +53,57 @@ exports.login = async (req, res) => {
     } catch (err) {
         console.error('Login Error:', err);
         res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.register = async (req, res) => {
+    const { type, password, ...data } = req.body;
+
+    if (!type || !password) {
+        return res.status(400).json({ error: 'Type and password are required' });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        if (type === 'beneficiary') {
+            const { fullName, rationCardNumber, aadhaarLast4, mobileNumber } = data;
+
+            if (!fullName || !rationCardNumber) {
+                return res.status(400).json({ error: 'Name and Ration Card Number required' });
+            }
+
+            await pool.query(
+                `INSERT INTO beneficiaries (beneficiary_id, name, aadhaar_last_4, mobile_number, password_hash)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [rationCardNumber, fullName, aadhaarLast4, mobileNumber, hashedPassword]
+            );
+
+            res.status(201).json({ message: 'Beneficiary registered successfully', id: rationCardNumber });
+
+        } else if (type === 'shop') {
+            const { shopName, shopId, ownerName, licenseNumber, mobileNumber } = data;
+
+            if (!shopName || !shopId) {
+                return res.status(400).json({ error: 'Shop Name and ID required' });
+            }
+
+            await pool.query(
+                `INSERT INTO ration_shops (shop_id, shop_name, owner_name, license_number, mobile_number, password_hash, device_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, 'DEV_PENDING')`,
+                [shopId, shopName, ownerName, licenseNumber, mobileNumber, hashedPassword]
+            );
+
+            res.status(201).json({ message: 'Shop registered successfully', id: shopId });
+
+        } else {
+            res.status(400).json({ error: 'Invalid user type' });
+        }
+    } catch (err) {
+        console.error('Registration Error:', err);
+        if (err.code === '23505') { // Unique violation
+            return res.status(409).json({ error: 'ID already exists' });
+        }
+        res.status(500).json({ error: 'Registration failed' });
     }
 };

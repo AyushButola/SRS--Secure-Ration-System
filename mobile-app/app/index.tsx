@@ -120,6 +120,10 @@ export default function LoginScreen() {
                         <Text style={styles.buttonText}>Login</Text>
                     )}
                 </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => router.push('/register')} style={{ marginTop: 24 }}>
+                    <Text style={styles.footer}>New User? Create Account</Text>
+                </TouchableOpacity>
             </BlurView>
         </View>
     );
