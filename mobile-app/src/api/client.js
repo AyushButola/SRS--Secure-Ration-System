@@ -6,11 +6,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For Android Emulator, localhost is 10.0.2.2
 // For Physical Device, use the LAN IP of the computer
 const getBaseUrl = () => {
-    const debuggerHost = Constants.expoConfig?.hostUri;
-    const localhost = debuggerHost?.split(':')[0] || 'localhost';
+    // Production URL
+    return 'https://srs-secure-ration-system.onrender.com/api';
 
-    // Default to port 3000
-    return `http://${localhost}:3000/api`;
+    // Localhost logic (kept for reference)
+    // const debuggerHost = Constants.expoConfig?.hostUri;
+    // const localhost = debuggerHost?.split(':')[0] || 'localhost';
+    // return `http://${localhost}:3000/api`;
 };
 
 const client = axios.create({
