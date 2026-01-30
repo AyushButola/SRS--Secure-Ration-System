@@ -113,7 +113,35 @@ const getReceipt = async (req, res) => {
     }
 };
 
+// GET /api/transactions/shop/history
+const getShopTransactions = async (req, res) => {
+    // Assuming shop_id comes from the authenticated user token (req.user.id)
+    // or passed as a query param if admin functionality. 
+    // Here we use req.user.id from authenticateToken middleware for security.
+    const shopId = req.user.id;
+
+    try {
+        const query = `
+            SELECT 
+                t.txn_id, t.beneficiary_id, t.commodity, t.quantity, t.timestamp, t.status,
+                b.name as beneficiary_name
+            FROM transactions t
+            LEFT JOIN beneficiaries b ON t.beneficiary_id = b.beneficiary_id
+            WHERE t.shop_id = $1
+            ORDER BY t.timestamp DESC
+            LIMIT 50
+        `;
+
+        const result = await db.query(query, [shopId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('History Error:', err);
+        res.status(500).json({ error: 'Failed to fetch history' });
+    }
+};
+
 module.exports = {
     createTransaction,
-    getReceipt
+    getReceipt,
+    getShopTransactions
 };

@@ -73,8 +73,12 @@ export default function RegisterScreen() {
 
         } catch (error: any) {
             console.error('Registration Error:', error);
-            const msg = error.response?.data?.error || 'Failed to register';
-            Alert.alert('Registration Failed', msg);
+            if (error.response?.status === 409) {
+                Alert.alert('Registration Failed', 'This Ration Card Number or Shop ID is already registered. Please use a unique ID.');
+            } else {
+                const msg = error.response?.data?.error || 'Failed to register';
+                Alert.alert('Registration Failed', msg);
+            }
         } finally {
             setLoading(false);
         }

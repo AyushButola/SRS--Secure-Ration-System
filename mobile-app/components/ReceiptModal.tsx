@@ -8,19 +8,61 @@ interface ReceiptModalProps {
     visible: boolean;
     txnId: string | null;
     onClose: () => void;
+    language?: 'en' | 'hi';
 }
 
-export default function ReceiptModal({ visible, txnId, onClose }: ReceiptModalProps) {
+export default function ReceiptModal({ visible, txnId, onClose, language = 'en' }: ReceiptModalProps) {
     const [loading, setLoading] = useState(false);
     const [receipt, setReceipt] = useState<any>(null);
+    const [displayLanguage, setDisplayLanguage] = useState<'en' | 'hi'>(language);
+
+    const translations = {
+        en: {
+            title: 'Digital Receipt',
+            beneficiary: 'Beneficiary',
+            shop: 'Shop',
+            date: 'Date',
+            time: 'Time',
+            hash: 'Transaction Hash',
+            close: 'Close',
+            error: 'Error',
+            loadError: 'Could not load receipt. Please try again.'
+        },
+        hi: {
+            title: 'डिजिटल रसीद',
+            beneficiary: 'लाभार्थी',
+            shop: 'दुकान',
+            date: 'दिनांक',
+            time: 'समय',
+            hash: 'लेनदेन हैश',
+            close: 'बंद करें',
+            error: 'त्रुटि',
+            loadError: 'रसीद लोड नहीं की जा सकी। कृपया पुनः प्रयास करें।'
+        }
+    };
+
+    // Commodity Translations
+    const commodityMap: any = {
+        'Rice': { en: 'Rice', hi: 'चावल' },
+        'Wheat': { en: 'Wheat', hi: 'गेहूँ' },
+        'Sugar': { en: 'Sugar', hi: 'चीनी' },
+        'Kerosene': { en: 'Kerosene', hi: 'मिट्टी का तेल' }
+    };
+
+    const t = translations[displayLanguage];
 
     React.useEffect(() => {
+        setDisplayLanguage(language);
         if (visible && txnId) {
             fetchReceipt(txnId);
         } else {
             setReceipt(null);
         }
-    }, [visible, txnId]);
+    }, [visible, txnId, language]);
+
+    const toggleDisplayLanguage = () => {
+        setDisplayLanguage(prev => prev === 'en' ? 'hi' : 'en');
+    };
 
     const fetchReceipt = async (id: string) => {
         setLoading(true);
@@ -30,7 +72,7 @@ export default function ReceiptModal({ visible, txnId, onClose }: ReceiptModalPr
             setReceipt(res.data);
         } catch (error) {
             console.error('Fetch Receipt Error', error);
-            Alert.alert('Error', 'Could not load receipt. Please try again.');
+            Alert.alert(t.error, t.loadError);
             onClose();
         } finally {
             setLoading(false);
@@ -48,20 +90,30 @@ export default function ReceiptModal({ visible, txnId, onClose }: ReceiptModalPr
                     ) : receipt ? (
                         <View style={styles.receiptCard}>
                             <View style={styles.header}>
-                                <Text style={styles.headerTitle}>Digital Receipt</Text>
-                                <MaterialIcons name="verified" size={24} color="#059669" />
+                                <Text style={styles.headerTitle}>{t.title}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                    <TouchableOpacity
+                                        onPress={toggleDisplayLanguage}
+                                        style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}
+                                    >
+                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB' }}>
+                                            {displayLanguage === 'en' ? 'हिन्दी' : 'English'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <MaterialIcons name="verified" size={24} color="#059669" />
+                                </View>
                             </View>
 
                             <View style={styles.divider} />
 
                             <View style={styles.row}>
-                                <Text style={styles.label}>Beneficiary:</Text>
+                                <Text style={styles.label}>{t.beneficiary}:</Text>
                                 <Text style={styles.value}>{receipt.beneficiary_name}</Text>
                             </View>
                             <Text style={styles.subValue}>ID: {receipt.beneficiary_id}</Text>
 
                             <View style={styles.row}>
-                                <Text style={styles.label}>Shop:</Text>
+                                <Text style={styles.label}>{t.shop}:</Text>
                                 <Text style={styles.value}>{receipt.shop_name}</Text>
                             </View>
                             <Text style={styles.subValue}>{receipt.location}</Text>
@@ -69,34 +121,38 @@ export default function ReceiptModal({ visible, txnId, onClose }: ReceiptModalPr
                             <View style={styles.divider} />
 
                             <View style={styles.row}>
-                                <Text style={styles.item}>{receipt.commodity}</Text>
+                                <Text style={styles.item}>
+                                    {displayLanguage === 'hi' && commodityMap[receipt.commodity]
+                                        ? commodityMap[receipt.commodity].hi
+                                        : receipt.commodity}
+                                </Text>
                                 <Text style={styles.qty}>{receipt.quantity} kg</Text>
                             </View>
 
                             <View style={styles.divider} />
 
                             <View style={styles.row}>
-                                <Text style={styles.label}>Date:</Text>
+                                <Text style={styles.label}>{t.date}:</Text>
                                 <Text style={styles.value}>{new Date(receipt.timestamp).toLocaleDateString()}</Text>
                             </View>
                             <View style={styles.row}>
-                                <Text style={styles.label}>Time:</Text>
+                                <Text style={styles.label}>{t.time}:</Text>
                                 <Text style={styles.value}>{new Date(receipt.timestamp).toLocaleTimeString()}</Text>
                             </View>
 
                             <View style={styles.footer}>
-                                <Text style={styles.hashLabel}>Transaction Hash:</Text>
+                                <Text style={styles.hashLabel}>{t.hash}:</Text>
                                 <Text style={styles.hash} numberOfLines={1} ellipsizeMode="middle">{receipt.hash}</Text>
                                 <Text style={styles.txnId}>TXN: {receipt.txn_id}</Text>
                             </View>
 
                             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                                <Text style={styles.closeText}>Close</Text>
+                                <Text style={styles.closeText}>{t.close}</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
                         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                            <Text style={styles.closeText}>Close</Text>
+                            <Text style={styles.closeText}>{t.close}</Text>
                         </TouchableOpacity>
                     )}
                 </BlurView>

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import otpGenerator from 'otp-generator';
+
 import ReceiptModal from '../components/ReceiptModal';
 
 export default function BeneficiaryDashboard() {
@@ -13,8 +13,8 @@ export default function BeneficiaryDashboard() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [beneficiaryId, setBeneficiaryId] = useState('');
-    const [qrData, setQrData] = useState('');
-    const [otp, setOtp] = useState('');
+
+    const [otp, setOtp] = useState<string | null>(null);
 
     // Receipt State
     const [showReceipt, setShowReceipt] = useState(false);
@@ -37,8 +37,8 @@ export default function BeneficiaryDashboard() {
             if (cachedTransactions) setTransactions(JSON.parse(cachedTransactions));
             if (lastSyncTime) setLastSynced(lastSyncTime);
 
-            // Also generate QR/OTP if we have ID
-            generateQR(id);
+            // Fetch OTP if we have ID
+            fetchCurrentOTP(id);
             // OTP might need network, but we can try generating or showing cached (if we cached it, unlikely for OTP)
         } catch (e) {
             console.log('Error loading offline data', e);
@@ -76,9 +76,8 @@ export default function BeneficiaryDashboard() {
             setLastSynced(now);
             await AsyncStorage.setItem(`last_synced_${id}`, now);
 
-            // Generate QR & OTP
-            generateQR(id);
-            generateOTP(id);
+            // Fetch Current Admin OTP
+            fetchCurrentOTP(id);
 
         } catch (error: any) {
             console.error('[Sync Error]', error);
@@ -107,42 +106,107 @@ export default function BeneficiaryDashboard() {
         }
     };
 
-    const generateQR = (id = beneficiaryId) => {
-        const timestamp = Date.now();
-        const data = JSON.stringify({
-            beneficiaryId: id,
-            timestamp,
-            type: 'beneficiary_qr'
-        });
-        setQrData(data);
-    };
-
-    const generateOTP = async (id = beneficiaryId) => {
+    const fetchCurrentOTP = async (id = beneficiaryId) => {
         try {
             const token = await AsyncStorage.getItem('auth_token');
             const client = require('../src/api/client').default;
 
-            const response = await client.post('/otp/generate', {
-                beneficiaryId: id
-            }, {
+            const response = await client.get('/otp/current', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            setOtp(response.data.otp);
+            if (response.data.valid) {
+                setOtp(response.data.otp);
+            } else {
+                setOtp(null); // No active OTP
+            }
         } catch (err) {
-            console.error('OTP Generation Error', err);
-            // Don't alert here to avoid spamming usage if offline
+            console.error('Fetch OTP Error', err);
         }
     };
+
+    // Language State
+    const [language, setLanguage] = useState<'en' | 'hi'>('en');
+
+    const toggleLanguage = () => {
+        setLanguage(prev => prev === 'en' ? 'hi' : 'en');
+    };
+
+    // Translations
+    const translations = {
+        en: {
+            title: 'My Ration Card',
+            logout: 'Logout',
+            tapToSync: 'Tap to Sync',
+            syncing: 'Syncing with server...',
+            lastSynced: 'Last Synced:',
+            syncRequired: 'Sync required',
+            adminQr: 'Admin-Sent QR Code',
+            scanVerify: 'Scan this to verify',
+            waitingAdmin: 'Waiting for Admin...',
+            askAdmin: 'Ask Shop/Admin to send QR',
+            otpTitle: 'One-Time Password',
+            otpSubtitle: 'Provide this to the shop for verification',
+            waiting: 'Waiting...',
+            refreshOtp: 'Refresh OTP Status',
+            shareCode: 'Share this code with the shop owner.',
+            noOtp: 'No active OTP. Ask Admin to trigger one.',
+            entitlements: 'Current Entitlements (Jan 2026)',
+            available: 'Available',
+            consumed: 'Consumed',
+            used: 'Used',
+            max: 'Max',
+            history: 'Transaction History',
+            viewReceipt: 'View Receipt',
+            noEntitlements: 'No entitlements found.',
+            noTransactions: 'No transactions found.'
+        },
+        hi: {
+            title: 'मेरा राशन कार्ड',
+            logout: 'लॉग आउट',
+            tapToSync: 'सिंक करने के लिए टैप करें',
+            syncing: 'सर्वर के साथ सिंक हो रहा है...',
+            lastSynced: 'अंतिम सिंक:',
+            syncRequired: 'सिंक आवश्यक',
+            adminQr: 'एडमिन द्वारा भेजा गया QR',
+            scanVerify: 'सत्यापन के लिए इसे स्कैन करें',
+            waitingAdmin: 'एडमिन की प्रतीक्षा...',
+            askAdmin: 'दुकान/एडमिन से QR भेजने को कहें',
+            otpTitle: 'वन-टाइम पासवर्ड (OTP)',
+            otpSubtitle: 'सत्यापन के लिए इसे दुकानदार को दें',
+            waiting: 'प्रतीक्षा...',
+            refreshOtp: 'OTP स्थिति रिफ्रेश करें',
+            shareCode: 'यह कोड दुकानदार के साथ साझा करें।',
+            noOtp: 'कोई सक्रिय OTP नहीं। एडमिन से मांगें।',
+            entitlements: 'वर्तमान पात्रता (जनवरी 2026)',
+            available: 'उपलब्ध',
+            consumed: 'उपभोग किया',
+            used: 'उपयोग:',
+            max: 'अधिकतम:',
+            history: 'लेनदेन इतिहास',
+            viewReceipt: 'रसीद देखें',
+            noEntitlements: 'कोई पात्रता नहीं मिली।',
+            noTransactions: 'कोई लेनदेन नहीं मिला।'
+        }
+    };
+
+    const t = translations[language];
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>My Ration Card</Text>
-                <Text style={styles.subTitle}>ID: {beneficiaryId}</Text>
-                <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-                    <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
+                <View>
+                    <Text style={styles.headerTitle}>{t.title}</Text>
+                    <Text style={styles.subTitle}>ID: {beneficiaryId}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity onPress={toggleLanguage} style={[styles.logoutBtn, { right: 100, backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Text style={styles.logoutText}>{language === 'en' ? 'हिन्दी' : 'English'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+                        <Text style={styles.logoutText}>{t.logout}</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView
@@ -151,8 +215,8 @@ export default function BeneficiaryDashboard() {
             >
                 <View style={{ alignItems: 'center', marginBottom: 20 }}>
                     <Text style={{ textAlign: 'center', color: '#64748B', marginBottom: 8, fontSize: 12 }}>
-                        {loading && !lastSynced ? 'Syncing with server...' :
-                            lastSynced ? `Last Synced: ${lastSynced}` : 'Sync required'}
+                        {loading && !lastSynced ? t.syncing :
+                            lastSynced ? `${t.lastSynced} ${lastSynced}` : t.syncRequired}
                     </Text>
                     {!loading && (
                         <TouchableOpacity
@@ -164,68 +228,73 @@ export default function BeneficiaryDashboard() {
                                 borderRadius: 8
                             }}
                         >
-                            <Text style={{ color: '#475569', fontSize: 12, fontWeight: '600' }}> Tap to Sync </Text>
+                            <Text style={{ color: '#475569', fontSize: 12, fontWeight: '600' }}> {t.tapToSync} </Text>
                         </TouchableOpacity>
                     )}
                 </View>
 
-                {/* QR Code Section */}
+                {/* QR Code Section - Driven by Admin OTP */}
                 <View style={styles.qrSection}>
-                    <Text style={styles.sectionTitle}>My QR Code</Text>
-                    <Text style={styles.qrSubtitle}>Show this at the shop for distribution</Text>
+                    <Text style={styles.sectionTitle}>{t.adminQr}</Text>
                     <View style={styles.qrContainer}>
-                        {qrData ? (
-                            <Image
-                                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}` }}
-                                style={{ width: 200, height: 200 }}
-                                contentFit="contain"
-                                transition={1000}
-                            />
+                        {otp ? (
+                            <>
+                                <Image
+                                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otp)}` }}
+                                    style={{ width: 200, height: 200 }}
+                                    contentFit="contain"
+                                    transition={1000}
+                                />
+                                <Text style={styles.qrDataText}>{t.scanVerify}</Text>
+                            </>
                         ) : (
-                            <Text>Loading QR...</Text>
+                            <View style={styles.qrPlaceholder}>
+                                <Text style={styles.qrText}>{t.waitingAdmin}</Text>
+                                <Text style={styles.qrDataText}>{t.askAdmin}</Text>
+                            </View>
                         )}
                     </View>
-                    <TouchableOpacity style={styles.refreshBtn} onPress={() => generateQR(beneficiaryId)}>
-                        <Text style={styles.refreshText}>Refresh QR</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* OTP Section */}
                 <View style={styles.otpSection}>
-                    <Text style={styles.sectionTitle}>One-Time Password</Text>
-                    <Text style={styles.otpSubtitle}>Provide this to the shop for verification</Text>
+                    <Text style={styles.sectionTitle}>{t.otpTitle}</Text>
+                    <Text style={styles.otpSubtitle}>{t.otpSubtitle}</Text>
                     <View style={styles.otpContainer}>
-                        <Text style={styles.otpText}>{otp || 'Generating...'}</Text>
+                        <Text style={styles.otpText}>{otp || t.waiting}</Text>
                     </View>
-                    <TouchableOpacity style={styles.refreshBtn} onPress={() => generateOTP(beneficiaryId)}>
-                        <Text style={styles.refreshText}>Generate New OTP</Text>
+                    <Text style={{ textAlign: 'center', marginBottom: 10, color: '#666' }}>
+                        {otp ? t.shareCode : t.noOtp}
+                    </Text>
+                    <TouchableOpacity style={styles.refreshBtn} onPress={() => fetchCurrentOTP(beneficiaryId)}>
+                        <Text style={styles.refreshText}>{t.refreshOtp}</Text>
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.sectionTitle}>Current Entitlements (Jan 2026)</Text>
+                <Text style={styles.sectionTitle}>{t.entitlements}</Text>
 
                 {entitlements.map((ent: any) => (
                     <View key={ent.entitlement_id} style={styles.card}>
                         <View style={styles.cardHeader}>
                             <Text style={styles.commodity}>{ent.commodity}</Text>
-                            <Text style={styles.status}>{ent.max_quantity - ent.consumed_quantity > 0 ? 'Available' : 'Consumed'}</Text>
+                            <Text style={styles.status}>{ent.max_quantity - ent.consumed_quantity > 0 ? t.available : t.consumed}</Text>
                         </View>
                         <View style={styles.progressBarBg}>
                             <View style={[styles.progressBarFill, { width: `${(ent.consumed_quantity / ent.max_quantity) * 100}%` }]} />
                         </View>
                         <View style={styles.stats}>
-                            <Text>Used: {ent.consumed_quantity} kg</Text>
-                            <Text>Max: {ent.max_quantity} kg</Text>
+                            <Text>{t.used} {ent.consumed_quantity} kg</Text>
+                            <Text>{t.max} {ent.max_quantity} kg</Text>
                         </View>
                     </View>
                 ))}
 
                 {entitlements.length === 0 && !loading && (
-                    <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No entitlements found.</Text>
+                    <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>{t.noEntitlements}</Text>
                 )}
 
                 {/* Transaction History */}
-                <Text style={styles.sectionTitle}>Transaction History</Text>
+                <Text style={styles.sectionTitle}>{t.history}</Text>
                 {transactions.map((trans: any) => (
                     <View key={trans.transaction_id || trans.txn_id} style={styles.historyCard}>
                         <View style={styles.historyHeader}>
@@ -241,13 +310,13 @@ export default function BeneficiaryDashboard() {
                                 setShowReceipt(true);
                             }}
                         >
-                            <Text style={styles.receiptLinkText}>View Receipt</Text>
+                            <Text style={styles.receiptLinkText}>{t.viewReceipt}</Text>
                         </TouchableOpacity>
                     </View>
                 ))}
 
                 {transactions.length === 0 && !loading && (
-                    <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No transactions found.</Text>
+                    <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>{t.noTransactions}</Text>
                 )}
             </ScrollView>
 
@@ -255,6 +324,7 @@ export default function BeneficiaryDashboard() {
                 visible={showReceipt}
                 txnId={selectedTxnId}
                 onClose={() => setShowReceipt(false)}
+                language={language}
             />
         </View >
     );

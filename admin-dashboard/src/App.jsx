@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import client from './api/client';
 import Login from './Login';
-import { LayoutDashboard, Users, ShoppingBag, AlertTriangle, Link, RefreshCcw, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, AlertTriangle, Link, RefreshCcw, LogOut, Send, Smartphone, Search, X } from 'lucide-react';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState({ beneficiaries: 0, shops: 0, transactions: 0, pending_conflicts: 0 });
   const [ledger, setLedger] = useState([]);
   const [conflicts, setConflicts] = useState([]);
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [searchId, setSearchId] = useState('');
+  const [searchResult, setSearchResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const checkAuth = () => {
@@ -30,15 +33,17 @@ function App() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, ledgerRes, conflictsRes] = await Promise.all([
+      const [statsRes, ledgerRes, conflictsRes, benefRes] = await Promise.all([
         client.get('/admin/stats'),
         client.get('/admin/ledger'),
-        client.get('/admin/conflicts')
+        client.get('/admin/conflicts'),
+        client.get('/admin/beneficiaries')
       ]);
 
       setStats(statsRes.data);
       setLedger(ledgerRes.data);
       setConflicts(conflictsRes.data);
+      setBeneficiaries(benefRes.data);
     } catch (e) {
       console.error("Fetch Error", e);
       if (e.response && e.response.status === 401) { // Token invalid/expired
@@ -47,6 +52,41 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTriggerOTP = async (beneficiaryId) => {
+    try {
+      const res = await client.post('/otp/admin-trigger', { beneficiaryId });
+      if (res.data.success) {
+        alert(`OTP Sent Successfully! OTP ID: ${res.data.otpId}`);
+      }
+    } catch (err) {
+      console.error("OTP Error", err);
+      alert("Failed to send OTP. See console.");
+    }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchId.trim()) return;
+
+    try {
+      const res = await client.get(`/admin/search-beneficiary/${searchId.trim()}`);
+      setSearchResult(res.data);
+    } catch (err) {
+      console.error("Search Error", err);
+      if (err.response && err.response.status === 404) {
+        alert("Beneficiary Not Found");
+      } else {
+        alert("Search Failed");
+      }
+      setSearchResult(null);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchId('');
+    setSearchResult(null);
   };
 
   useEffect(() => {
@@ -86,40 +126,123 @@ function App() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {/* Main Ledger Feed */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-          <h2 className="text-xl font-bold mb-8 flex items-center gap-3 text-slate-800">
-            <div className="bg-emerald-100 p-2 rounded-lg"><Link className="text-emerald-600" size={20} /></div>
-            Live Ledger Chain
-          </h2>
-          <div className="space-y-6">
-            {ledger.map((txn, i) => (
-              <div key={txn.txn_id} className="relative pl-10 pb-6 border-l-2 border-slate-200 last:border-0 last:pb-0">
-                {/* Chain Connector Node */}
-                <div className={`absolute -left-[9px] top-6 w-4 h-4 rounded-full border-2 ring-4 ring-white ${txn.status === 'VALID' ? 'bg-emerald-500 border-emerald-200' : 'bg-rose-500 border-rose-200'}`}></div>
+        <div className="lg:col-span-2 space-y-8">
 
-                <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 hover:shadow-md transition duration-200">
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="font-mono text-xs font-bold text-slate-400 uppercase tracking-widest">TX: {txn.txn_id.substring(0, 8)}</span>
-                    <span className={`text-xs px-3 py-1 rounded-full font-bold ${txn.status === 'VALID' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{txn.status}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-bold text-lg text-slate-800">{txn.commodity} <span className="text-slate-400">|</span> {txn.quantity} KG</h3>
-                    <span className="text-sm font-medium text-slate-500">{new Date(txn.timestamp).toLocaleString()}</span>
-                  </div>
-                  <div className="text-sm text-slate-600 mb-4 leading-relaxed">
-                    <span className="font-semibold text-slate-700">Beneficiary:</span> {txn.beneficiary_name || txn.beneficiary_id} <br />
-                    <span className="font-semibold text-slate-700">Shop:</span> {txn.shop_name || txn.shop_id}
-                  </div>
-                  <div className="pt-3 border-t border-slate-200 font-mono text-[10px] text-slate-400 break-all flex flex-col gap-1">
-                    <div><span className="font-bold text-slate-500">HASH:</span> {txn.hash}</div>
-                    <div><span className="font-bold text-slate-500">PREV:</span> {txn.prev_hash}</div>
+          {/* Beneficiary Management */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-slate-800">
+                <div className="bg-blue-100 p-2 rounded-lg"><Users className="text-blue-600" size={20} /></div>
+                Beneficiary Management
+              </h2>
+              <form onSubmit={handleSearch} className="flex gap-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search Ration ID..."
+                    value={searchId}
+                    onChange={(e) => setSearchId(e.target.value)}
+                    className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                  {searchResult && (
+                    <button type="button" onClick={clearSearch} className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600">
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">Search</button>
+              </form>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs p-2">
+                  <tr>
+                    <th className="p-3 rounded-l-lg">Name</th>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Mobile</th>
+                    <th className="p-3 rounded-r-lg text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {searchResult ? (
+                    <tr className="bg-blue-50">
+                      <td className="p-4 font-bold text-slate-800">{searchResult.name} <span className="ml-2 text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded">SEARCH RESULT</span></td>
+                      <td className="p-4 font-mono text-xs">{searchResult.beneficiary_id}</td>
+                      <td className="p-4">{searchResult.mobile_number}</td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => handleTriggerOTP(searchResult.beneficiary_id)}
+                          className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-2 ml-auto shadow-md shadow-blue-200"
+                        >
+                          <Send size={14} /> Send OTP & QR
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    beneficiaries.slice(0, 5).map(b => (
+                      <tr key={b.beneficiary_id}>
+                        <td className="p-4 font-bold text-slate-800">{b.name}</td>
+                        <td className="p-4 font-mono text-xs">{b.beneficiary_id}</td>
+                        <td className="p-4">{b.mobile_number}</td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleTriggerOTP(b.beneficiary_id)}
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-2 ml-auto"
+                          >
+                            <Send size={14} /> Send OTP & QR
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {!searchResult && beneficiaries.length > 5 && (
+                <div className="text-center mt-4 p-2 bg-slate-50 rounded-lg text-xs font-bold text-slate-500 cursor-pointer hover:bg-slate-100 transition">
+                  View All Beneficiaries ({beneficiaries.length})
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <h2 className="text-xl font-bold mb-8 flex items-center gap-3 text-slate-800">
+              <div className="bg-emerald-100 p-2 rounded-lg"><Link className="text-emerald-600" size={20} /></div>
+              Live Ledger Chain
+            </h2>
+            <div className="space-y-6">
+              {ledger.map((txn, i) => (
+                <div key={txn.txn_id} className="relative pl-10 pb-6 border-l-2 border-slate-200 last:border-0 last:pb-0">
+                  {/* Chain Connector Node */}
+                  <div className={`absolute -left-[9px] top-6 w-4 h-4 rounded-full border-2 ring-4 ring-white ${txn.status === 'VALID' ? 'bg-emerald-500 border-emerald-200' : 'bg-rose-500 border-rose-200'}`}></div>
+
+                  <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 hover:shadow-md transition duration-200">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="font-mono text-xs font-bold text-slate-400 uppercase tracking-widest">TX: {txn.txn_id.substring(0, 8)}</span>
+                      <span className={`text-xs px-3 py-1 rounded-full font-bold ${txn.status === 'VALID' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{txn.status}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-lg text-slate-800">{txn.commodity} <span className="text-slate-400">|</span> {txn.quantity} KG</h3>
+                      <span className="text-sm font-medium text-slate-500">{new Date(txn.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm text-slate-600 mb-4 leading-relaxed">
+                      <span className="font-semibold text-slate-700">Beneficiary:</span> {txn.beneficiary_name || txn.beneficiary_id} <br />
+                      <span className="font-semibold text-slate-700">Shop:</span> {txn.shop_name || txn.shop_id}
+                    </div>
+                    <div className="pt-3 border-t border-slate-200 font-mono text-[10px] text-slate-400 break-all flex flex-col gap-1">
+                      <div><span className="font-bold text-slate-500">HASH:</span> {txn.hash}</div>
+                      <div><span className="font-bold text-slate-500">PREV:</span> {txn.prev_hash}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            {ledger.length === 0 && <p className="text-slate-400 italic text-center py-10">No transactions recorded yet.</p>}
+              ))}
+              {ledger.length === 0 && <p className="text-slate-400 italic text-center py-10">No transactions recorded yet.</p>}
+            </div>
           </div>
         </div>
+
 
         {/* Conflicts Panel */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 h-fit sticky top-8">

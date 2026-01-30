@@ -5,9 +5,9 @@ import client from '../../src/api/client';
 import Constants from 'expo-constants';
 
 export default function SyncScreen() {
-    const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState<string[]>([]);
 
-    const log = (msg) => setLogs(prev => [...prev, msg]);
+    const log = (msg: string) => setLogs(prev => [...prev, msg]);
 
     const handleSync = async () => {
         log('--- Starting Sync ---');
@@ -27,7 +27,7 @@ export default function SyncScreen() {
         // Map SQLite rows to match Backend expectations
         const payload = {
             device_id: Constants.deviceId || 'UNKNOWN_DEVICE',
-            transactions: pending.map(row => ({
+            transactions: pending.map((row: any) => ({
                 txn_id: row.id,
                 beneficiary_id: row.beneficiary_id,
                 shop_id: row.shop_id,
@@ -50,7 +50,7 @@ export default function SyncScreen() {
                 log(`Synced: ${result.synced}, Failed: ${result.failed}`);
 
                 if (result.errors && result.errors.length > 0) {
-                    result.errors.forEach(err => log(`[!] ${err.id.substring(0, 4)}... : ${err.error}`));
+                    result.errors.forEach((err: any) => log(`[!] ${err.id.substring(0, 4)}... : ${err.error}`));
                 }
 
                 if (result.synced > 0) {
@@ -61,7 +61,7 @@ export default function SyncScreen() {
                     log('See errors above.');
                 }
             }
-        } catch (e) {
+        } catch (e: any) {
             log(`ERROR: ${e.message}`);
             console.error(e);
         }

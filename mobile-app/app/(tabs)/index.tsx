@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initDB, getDB } from '../../src/db/sqlite';
 import * as Crypto from 'expo-crypto';
 import CustomModal from '../../components/CustomModal';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import ReceiptModal from '../../components/ReceiptModal';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -54,24 +54,94 @@ export default function Dashboard() {
     };
 
     // QR Scanner State
-    const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+    const [permission, requestPermission] = useCameraPermissions();
     const [scanned, setScanned] = useState(false);
     const [scannedBeneficiaryId, setScannedBeneficiaryId] = useState('');
     const [otp, setOtp] = useState('');
 
     const router = useRouter();
 
+    // Language State
+    const [language, setLanguage] = useState<'en' | 'hi'>('en');
+
+    const translations = {
+        en: {
+            offlineMode: 'OFFLINE MODE',
+            pendingSync: 'Pending Sync',
+            logout: 'Logout',
+            distributeRation: 'Distribute Ration',
+            beneficiary: 'Beneficiary',
+            clear: 'Clear',
+            scanQr: 'Scan Beneficiary QR',
+            enterId: 'Enter Beneficiary ID (or Scan QR)',
+            scanCommodity: 'Scan Commodity (e.g. RICE)',
+            addToCart: 'Add to Cart',
+            enterOtp: 'Enter Beneficiary OTP',
+            reset: 'Reset / Clear Queue',
+            cart: 'Cart',
+            liveStock: 'Live Stock Levels',
+            rice: 'Rice',
+            wheat: 'Wheat',
+            cartEmpty: 'Cart is empty',
+            recentDistributions: 'Recent Distributions',
+            viewReceipt: 'View Receipt',
+            completeDistribution: 'Complete Distribution',
+            distributionComplete: 'Distribution Complete',
+            successMsg: 'Successfully distributed:',
+            inputError: 'Input Error',
+            enterCommodity: 'Please enter a commodity name',
+            noBeneficiary: 'No Beneficiary',
+            scanFirst: 'Please scan beneficiary QR code first.',
+            otpRequired: 'OTP Required',
+            enterOtpMsg: 'Please enter the beneficiary OTP.',
+            invalidOtp: 'Invalid OTP',
+            otpExpired: 'The OTP entered is incorrect or has expired.'
+        },
+        hi: {
+            offlineMode: 'ऑफलाइन मोड',
+            pendingSync: 'सिंक पेंडिंग',
+            logout: 'लॉग आउट',
+            distributeRation: 'राशन वितरण',
+            beneficiary: 'लाभार्थी',
+            clear: 'साफ़ करें',
+            scanQr: 'लाभार्थी क्यूआर स्कैन करें',
+            enterId: 'लाभार्थी आईडी दर्ज करें (या क्यूआर स्कैन करें)',
+            scanCommodity: 'वस्तु स्कैन करें (जैसे चावल)',
+            addToCart: 'कार्ट में डालें',
+            enterOtp: 'लाभार्थी ओटीपी दर्ज करें',
+            reset: 'रीसेट / कतार साफ़ करें',
+            cart: 'कार्ट',
+            liveStock: 'लाइव स्टॉक',
+            rice: 'चावल',
+            wheat: 'गेहूं',
+            cartEmpty: 'कार्ट खाली है',
+            recentDistributions: 'हालिया वितरण',
+            viewReceipt: 'रसीद देखें',
+            completeDistribution: 'वितरण पूरा करें',
+            distributionComplete: 'वितरण पूरा हुआ',
+            successMsg: 'सफलतापूर्वक वितरित:',
+            inputError: 'इनपुट त्रुटि',
+            enterCommodity: 'कृपया वस्तु का नाम दर्ज करें',
+            noBeneficiary: 'कोई लाभार्थी नहीं',
+            scanFirst: 'कृपया पहले लाभार्थी क्यूआर स्कैन करें',
+            otpRequired: 'ओटीपी आवश्यक',
+            enterOtpMsg: 'कृपया लाभार्थी ओटीपी दर्ज करें',
+            invalidOtp: 'अमान्य ओटीपी',
+            otpExpired: 'ओटीपी गलत है या समाप्त हो गया है'
+        }
+    };
+
+    const t = translations[language];
+
+    const toggleLanguage = () => {
+        setLanguage(prev => prev === 'en' ? 'hi' : 'en');
+    };
+
     useEffect(() => {
         initDB();
         updatePendingCount();
         fetchStock();
-        getBarCodeScannerPermissions();
     }, []);
-
-    const getBarCodeScannerPermissions = async () => {
-        const { status } = await BarCodeScanner.requestPermissionsAsync();
-        setHasPermission(status === 'granted');
-    };
 
     const handleBarCodeScanned = ({ type, data }: { type: string, data: string }) => {
         setScanned(true);
@@ -97,12 +167,12 @@ export default function Dashboard() {
 
     const logout = async () => {
         Alert.alert(
-            'Logout',
+            t.logout,
             'Are you sure you want to logout?',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Logout', onPress: async () => {
+                    text: t.logout, onPress: async () => {
                         await AsyncStorage.clear();
                         router.replace('/');
                     }
@@ -134,7 +204,7 @@ export default function Dashboard() {
 
     const addToCart = () => {
         if (!scannedItem) {
-            showModal('error', 'Input Error', 'Please enter a commodity name (e.g., RICE)');
+            showModal('error', t.inputError, t.enterCommodity);
             return;
         }
 
@@ -162,12 +232,12 @@ export default function Dashboard() {
         if (cart.length === 0) return;
 
         if (!scannedBeneficiaryId) {
-            showModal('error', 'No Beneficiary', 'Please scan beneficiary QR code first.');
+            showModal('error', t.noBeneficiary, t.scanFirst);
             return;
         }
 
         if (!otp) {
-            showModal('error', 'OTP Required', 'Please enter the beneficiary OTP.');
+            showModal('error', t.otpRequired, t.enterOtpMsg);
             return;
         }
 
@@ -180,7 +250,7 @@ export default function Dashboard() {
             if (isValid) {
                 isOtpVerified = true;
             } else {
-                showModal('error', 'Invalid OTP', 'The OTP entered is incorrect or has expired.');
+                showModal('error', t.invalidOtp, t.otpExpired);
                 return;
             }
         } catch (err: any) {
@@ -211,7 +281,7 @@ export default function Dashboard() {
         setOtp('');
         updatePendingCount();
 
-        showModal('success', 'Distribution Complete', `Successfully distributed:\n\n${summary}\n\nTransactions saved. Syncing...`);
+        showModal('success', t.distributionComplete, `${t.successMsg}\n\n${summary}\n\nTransactions saved. Syncing...`);
 
         // Auto-Sync
         setTimeout(() => {
@@ -254,51 +324,60 @@ export default function Dashboard() {
 
             {/* Network Status Header */}
             <View style={styles.header}>
-                <View style={styles.statusBadge}>
-                    <Text style={styles.statusText}>OFFLINE MODE</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>{t.offlineMode}</Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={toggleLanguage}
+                        style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}
+                    >
+                        <Text style={{ color: '#1E40AF', fontWeight: 'bold' }}>{language === 'en' ? 'हिंदी' : 'English'}</Text>
+                    </TouchableOpacity>
                 </View>
-                <Text style={styles.pendingText}>Pending Sync: {offlineCount}</Text>
+
+                <Text style={styles.pendingText}>{t.pendingSync}: {offlineCount}</Text>
                 <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-                    <Text style={styles.logoutText}>Logout</Text>
+                    <Text style={styles.logoutText}>{t.logout}</Text>
                 </TouchableOpacity>
             </View>
 
             {/* "Scanner" Area */}
             <View style={styles.scanArea}>
-                <Text style={styles.sectionTitle}>Distribute Ration</Text>
+                <Text style={styles.sectionTitle}>{t.distributeRation}</Text>
 
                 {/* Beneficiary Info */}
                 {scannedBeneficiaryId ? (
                     <View style={styles.beneficiaryInfo}>
-                        <Text style={styles.beneficiaryText}>Beneficiary: {scannedBeneficiaryId}</Text>
+                        <Text style={styles.beneficiaryText}>{t.beneficiary}: {scannedBeneficiaryId}</Text>
                         <TouchableOpacity onPress={() => setScannedBeneficiaryId('')} style={styles.clearBtn}>
-                            <Text style={styles.clearText}>Clear</Text>
+                            <Text style={styles.clearText}>{t.clear}</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <TouchableOpacity style={styles.scanButton} onPress={() => setScanned(!scanned)}>
-                        <Text style={styles.scanButtonText}>Scan Beneficiary QR</Text>
+                    <TouchableOpacity style={styles.scanButton} onPress={() => {
+                        if (!permission?.granted) {
+                            requestPermission();
+                        }
+                        setScanned(!scanned);
+                    }}>
+                        <Text style={styles.scanButtonText}>{t.scanQr}</Text>
                     </TouchableOpacity>
                 )}
 
                 {scanned && !scannedBeneficiaryId && (
-                    <View style={StyleSheet.absoluteFillObject}>
-                        <BarCodeScanner
-                            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-                            style={StyleSheet.absoluteFillObject}
-                        />
-                        <View style={styles.scannerOverlay}>
-                            <TouchableOpacity style={styles.cancelScanBtn} onPress={() => setScanned(false)}>
-                                <Text style={styles.cancelScanText}>Cancel Scan</Text>
-                            </TouchableOpacity>
-                        </View>
+                    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }]}>
+                        <Text style={{ color: 'white' }}>Camera Debug Mode</Text>
+                        <TouchableOpacity style={styles.cancelScanBtn} onPress={() => setScanned(false)}>
+                            <Text style={styles.cancelScanText}>Close</Text>
+                        </TouchableOpacity>
                     </View>
                 )}
 
                 {/* Manual ID Input */}
                 <TextInput
                     style={styles.input}
-                    placeholder="Enter Beneficiary ID (or Scan QR)"
+                    placeholder={t.enterId}
                     placeholderTextColor="#94A3B8"
                     value={scannedBeneficiaryId}
                     onChangeText={setScannedBeneficiaryId}
@@ -307,20 +386,20 @@ export default function Dashboard() {
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Scan Commodity (e.g. RICE)"
+                    placeholder={t.scanCommodity}
                     placeholderTextColor="#94A3B8"
                     value={scannedItem}
                     onChangeText={setScannedItem}
                 />
                 <TouchableOpacity style={styles.addButton} onPress={addToCart}>
-                    <Text style={styles.addButtonText}>Add to Cart</Text>
+                    <Text style={styles.addButtonText}>{t.addToCart}</Text>
                 </TouchableOpacity>
 
                 {/* OTP Input - Always visible if ID is present */}
                 {scannedBeneficiaryId ? (
                     <TextInput
                         style={styles.input}
-                        placeholder="Enter Beneficiary OTP"
+                        placeholder={t.enterOtp}
                         placeholderTextColor="#94A3B8"
                         value={otp}
                         onChangeText={setOtp}
@@ -330,13 +409,13 @@ export default function Dashboard() {
                 ) : null}
 
                 <TouchableOpacity style={[styles.addButton, { marginTop: 10, backgroundColor: '#EF4444' }]} onPress={clearData}>
-                    <Text style={styles.addButtonText}>Reset / Clear Queue</Text>
+                    <Text style={styles.addButtonText}>{t.reset}</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Cart List */}
             <View style={styles.cartArea}>
-                <Text style={styles.sectionTitle}>Cart ({cart.length})</Text>
+                <Text style={styles.sectionTitle}>{t.cart} ({cart.length})</Text>
                 <FlatList
                     data={cart}
                     keyExtractor={item => item.id}
@@ -348,20 +427,20 @@ export default function Dashboard() {
                     )}
                     ListHeaderComponent={
                         <View style={{ marginBottom: 20, backgroundColor: '#EFF6FF', padding: 16, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: '#2563EB' }}>
-                            <Text style={{ fontWeight: 'bold', color: '#1E40AF', marginBottom: 4 }}>Live Stock Levels</Text>
+                            <Text style={{ fontWeight: 'bold', color: '#1E40AF', marginBottom: 4 }}>{t.liveStock}</Text>
                             <Text style={{ fontSize: 13, color: '#3B82F6' }}>
-                                Rice: {stock?.stock?.['RICE'] ?? '--'} kg | Wheat: {stock?.stock?.['WHEAT'] ?? '--'} kg
+                                {t.rice}: {stock?.stock?.['RICE'] ?? '--'} kg | {t.wheat}: {stock?.stock?.['WHEAT'] ?? '--'} kg
                             </Text>
                         </View>
                     }
-                    ListEmptyComponent={<Text style={styles.emptyText}>Cart is empty</Text>}
+                    ListEmptyComponent={<Text style={styles.emptyText}>{t.cartEmpty}</Text>}
                     contentContainerStyle={{ paddingBottom: 100 }}
                 />
             </View>
 
             {/* Recent Transactions List (Mini) */}
             <View style={{ paddingHorizontal: 24, paddingBottom: 20 }}>
-                <Text style={styles.sectionTitle}>Recent Distributions</Text>
+                <Text style={styles.sectionTitle}>{t.recentDistributions}</Text>
                 {recentTxns.map((txn: any, index) => (
                     <View key={index} style={styles.cartItem}>
                         <View>
@@ -372,22 +451,14 @@ export default function Dashboard() {
                             {txn.synced === 1 ? (
                                 <TouchableOpacity
                                     onPress={() => {
-                                        // Offline Transactions locally stored don't have the real Server Txn ID usually...
-                                        // UNLESS we updated it during sync.
-                                        // For now, let's assume if synced, we can try to fetch by the offline ID 
-                                        // (if we mapped it) OR we should have stored the real ID.
-                                        // Limitation: offline_transactions table uses local ID.
-                                        // Solution: We will just try to use the ID we have. 
-                                        // If the server synced it, it might allow lookup by that ID or we need to map it.
-                                        // Let's rely on the ID matching for now (or fail gracefully).
                                         setSelectedTxnId(txn.id);
                                         setShowReceipt(true);
                                     }}
                                 >
-                                    <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 12 }}>View Receipt</Text>
+                                    <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 12 }}>{t.viewReceipt}</Text>
                                 </TouchableOpacity>
                             ) : (
-                                <Text style={{ color: '#D97706', fontSize: 12 }}>Pending Sync</Text>
+                                <Text style={{ color: '#D97706', fontSize: 12 }}>{t.pendingSync}</Text>
                             )}
                         </View>
                     </View>
@@ -408,7 +479,7 @@ export default function Dashboard() {
                     onPress={checkout}
                     disabled={cart.length === 0}
                 >
-                    <Text style={styles.checkoutText}>Complete Distribution</Text>
+                    <Text style={styles.checkoutText}>{t.completeDistribution}</Text>
                 </TouchableOpacity>
             </View>
         </View>
