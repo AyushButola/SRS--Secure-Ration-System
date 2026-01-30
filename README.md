@@ -1,5 +1,36 @@
-# 🛒 Smart Ration Ledger
-**Secure, Offline-First, Fraud-Resistant Ration Distribution System**
+# 🛒 Secure Ration System (SRS)
+**A Transparent, Blockchain-Enabled, Offline-First Ration Distribution Platform**
+
+## 🚀 Live Deployments
+
+| Interface | Status | Link |
+| :--- | :--- | :--- |
+| **🛍️ Shop Web Portal** | 🟢 Live | [srs-secure-ration-system-shop.vercel.app](https://srs-secure-ration-system-shop.vercel.app/) |
+| **👨‍💼 Admin Dashboard** | 🟢 Live | [srs-secure-ration-system-admin.vercel.app](https://srs-secure-ration-system-admin.vercel.app/) |
+| **📱 Mobile App** | 🟡 Beta | [Download APK (Expo)](https://expo.dev/accounts/rawatadi/projects/mobile-app/builds/1095f721-8502-4499-b9a9-5ba381c39b88) |
+| **⚙️ Backend API** | 🟢 Live | [srs-secure-ration-system.onrender.com](https://srs-secure-ration-system.onrender.com/) |
+
+---
+
+## ✨ What's New? (Recent Updates)
+
+### 👨‍💼 Admin Dashboard
+*   **Live Ledger Chain**: Visual representation of the blockchain-inspired transaction ledger.
+*   **Real-time Fraud Alerts**: Instant notifications for potential conflicts (e.g., double spending, hash mismatches).
+*   **Beneficiary Management**: Search, viewing, and manual OTP/QR trigger for beneficiaries.
+*   **System Stats**: Real-time overview of total beneficiaries, active shops, and transaction volume.
+
+### 🛍️ Shop Web Portal
+*   **Secure Authentication**: Robust Shop ID & Password login mechanism.
+*   **Multi-Language Support**: Full support for **English and Hindi** interfaces.
+*   **Offline-Ready**: Designed to queue transactions locally when internet is unavailable.
+
+### 🎨 UI/UX Enhancements
+*   Modern, clean interface using **Tailwind CSS**.
+*   **Lucide React Icons** for intuitive visual cues.
+*   Responsive design for tablet and desktop usage.
+
+---
 
 ## 📌 Project Overview
 Smart Ration Ledger (SRS) is a secure and transparent ration distribution system designed to eliminate fraud, duplication, and data tampering in public distribution systems.
@@ -26,7 +57,7 @@ Smart Ration Ledger solves these problems by introducing:
 - **📴 Offline-first transaction handling**
 - **🚨 Automated fraud & duplicate detection**
 - **📊 Centralized audit trail**
-- **👨‍💼 Admin-controlled conflict resolution**
+- **�‍💼 Admin-controlled conflict resolution**
 
 ---
 
@@ -61,7 +92,7 @@ Smart Ration Ledger solves these problems by introducing:
 
 ---
 
-## 🗄️ Database Design
+## �️ Database Design
 The system uses a relational database combined with an append-only transaction ledger.
 
 ### Core Tables
@@ -138,17 +169,17 @@ Admin can:
 
 ---
 
-## 🛠️ Tech Stack (Current / Planned)
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend** | HTML, CSS, JavaScript |
+| **Frontend** | React, Tailwind CSS, Lucide React |
 | **Shop Device** | Web / Android App |
 | **Backend** | Node.js / Express |
 | **Database** | PostgreSQL |
 | **Hashing** | SHA-256 (bcryptjs) |
 | **APIs** | REST |
-| **Deployment** | Docker / Cloud VM |
+| **Deployment** | Vercel (Frontend), Render (Backend) |
 
 ---
 
